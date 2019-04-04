@@ -1,3 +1,7 @@
-# UvA Deep Learning Course Practical Assignments
+# Deep Learning
 
-- Assignment 1 is released. The deadline is **April 17th, 23:59**.
+### About
+This repository contains code for projects of MSc. course Deep Learning.
+
+### Description
+To be updated.
