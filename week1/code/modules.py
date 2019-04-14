@@ -111,7 +111,7 @@ class ReLUModule(object):
     # PUT YOUR CODE HERE  #
     #######################
     self.x = x
-    out =  np.maximum(0, x)
+    out = np.maximum(0, x)
     ########################
     # END OF YOUR CODE    #
     #######################
