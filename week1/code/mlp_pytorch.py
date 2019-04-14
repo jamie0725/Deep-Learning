@@ -39,7 +39,6 @@ class MLP(nn.Module):
     self.layers = nn.ModuleList()
     if len(n_hidden) == 0:
       self.layers.append(nn.Linear(n_inputs, n_classes, bias=True))
-      self.layers.append(nn.ReLU())
     else:
       for i in range(len(n_hidden)):
         if i == 0:
@@ -49,7 +48,6 @@ class MLP(nn.Module):
           self.layers.append(nn.Linear(n_hidden[i-1], n_hidden[i], bias=True))
           self.layers.append(nn.ReLU())
       self.layers.append(nn.Linear(n_hidden[-1], n_classes, bias=True))
-      self.layers.append(nn.ReLU())
     ########################
     # END OF YOUR CODE    #
     #######################

@@ -11,6 +11,7 @@ import numpy as np
 import os
 from mlp_pytorch import MLP
 import cifar10_utils
+import torch
 import torch.nn as nn
 import torch.optim as optim
 
@@ -20,6 +21,8 @@ LEARNING_RATE_DEFAULT = 2e-3
 MAX_STEPS_DEFAULT = 1500
 BATCH_SIZE_DEFAULT = 200
 EVAL_FREQ_DEFAULT = 100
+OPTIMIZER = 'SGD'
+WEIGHT_DECAY = 0
 
 # Directory in which cifar data is saved
 DATA_DIR_DEFAULT = './cifar10/cifar-10-batches-py'
@@ -47,11 +50,12 @@ def accuracy(predictions, targets):
   ########################
   # PUT YOUR CODE HERE  #
   #######################
+  match = 0
   bSize = targets.shape[0]
-  pred = np.argmax(predictions, axis = 1)
-  label = np.argmax(targets, axis = 1)
-  match = np.equal(pred, label).astype(int)
-  accuracy = np.sum(match) / bSize
+  pred = predictions.argmax(dim=1)
+  target = targets.argmax(dim=1)
+  match += (pred == target).sum().item()
+  accuracy = match / bSize
   ########################
   # END OF YOUR CODE    #
   #######################
@@ -81,38 +85,49 @@ def train():
   ########################
   # PUT YOUR CODE HERE  #
   #######################
+  device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
   cifar10 = cifar10_utils.get_cifar10(FLAGS.data_dir)
   x, y = cifar10['train'].next_batch(FLAGS.batch_size)
-  x = x.reshape(FLAGS.batch_size, -1)
+  x = torch.from_numpy(x.reshape(FLAGS.batch_size, -1)).float().to(device)
+  y = torch.from_numpy(y).float().to(device)
   n_inputs = x.shape[1]
   n_classes = y.shape[1]
   n_hidden = dnn_hidden_units
   MutLP = MLP(n_inputs, n_hidden, n_classes)
-  optimizer = optim.Adam(MutLP.parameters(), lr=FLAGS.learning_rate)
+  MutLP.to(device)
+  if FLAGS.optimizer == 'SGD':
+    optimizer = optim.SGD(MutLP.parameters(), lr=FLAGS.learning_rate, weight_decay=FLAGS.weight_decay)
+  elif FLAGS.optimizer == 'Adam':
+    optimizer = optim.Adam(MutLP.parameters(), FLAGS.learning_rate, weight_decay=FLAGS.weight_decay)
+  else:
+    print('Try SGD or Adam...')
   loss = nn.CrossEntropyLoss()
   l_list = list()
   train_acc = list()
   test_acc = list()
-  print(MutLP)
+  print('\nTraining...')
   for i in range(FLAGS.max_steps):
     optimizer.zero_grad()
     s_pred = MutLP(x)
-    f_loss = loss(s_pred, y)
+    f_loss = loss(s_pred, y.argmax(dim=1))
     f_loss.backward()
     optimizer.step()
     if i % FLAGS.eval_freq == 0:
       l_list.append(round(f_loss.item(), 3))
       train_acc.append(accuracy(s_pred, y))
       t_x, t_y = cifar10['test'].images, cifar10['test'].labels
-      t_x = t_x.reshape(t_x.shape[0], -1)
+      t_x = torch.from_numpy(t_x.reshape(t_x.shape[0], -1)).float().to(device)
+      t_y = torch.from_numpy(t_y).float().to(device)
       t_pred = MutLP(t_x)
       test_acc.append(accuracy(t_pred, t_y))
     x, y = cifar10['train'].next_batch(FLAGS.batch_size)
-    x = x.reshape(FLAGS.batch_size, -1)
+    x = torch.from_numpy(x.reshape(FLAGS.batch_size, -1)).float().to(device)
+    y = torch.from_numpy(y).float().to(device)
+  print('Done!\n')
   print('Training Losses:', l_list)
   print('Training Accuracies:', train_acc)
   print('Test Accuracies:', test_acc)
-
+  print('Best Test Accuracy:', max(test_acc))
   ########################
   # END OF YOUR CODE    #
   #######################
@@ -152,6 +167,10 @@ if __name__ == '__main__':
                         help='Frequency of evaluation on the test set')
   parser.add_argument('--data_dir', type = str, default = DATA_DIR_DEFAULT,
                       help='Directory for storing input data')
+  parser.add_argument('--optimizer', type = str, default = OPTIMIZER,
+                      help='Type of optimizer')
+  parser.add_argument('--weight_decay', type = float, default = WEIGHT_DECAY,
+                      help='L2 penalty')
   FLAGS, unparsed = parser.parse_known_args()
 
   main()

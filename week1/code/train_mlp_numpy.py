@@ -47,8 +47,8 @@ def accuracy(predictions, targets):
   # PUT YOUR CODE HERE  #
   #######################
   bSize = targets.shape[0]
-  pred = np.argmax(predictions, axis = 1)
-  label = np.argmax(targets, axis = 1)
+  pred = np.argmax(predictions, axis=1)
+  label = np.argmax(targets, axis=1)
   match = np.equal(pred, label).astype(int)
   accuracy = np.sum(match) / bSize
   ########################
@@ -91,6 +91,7 @@ def train():
   l_list = list()
   train_acc = list()
   test_acc = list()
+  print('\nTraining...')
   for i in range(FLAGS.max_steps):
     s_pred = MutLP.forward(x)
     f_loss = loss.forward(s_pred, y)
@@ -109,9 +110,11 @@ def train():
       l_list.append(round(f_loss, 3))
     x, y = cifar10['train'].next_batch(FLAGS.batch_size)
     x = x.reshape(FLAGS.batch_size, -1)
+  print('Done!\n')
   print('Training Losses:', l_list)
   print('Training Accuracies:', train_acc)
   print('Test Accuracies:', test_acc)
+  print('Best Test Accuracy:', max(test_acc))
   ########################
   # END OF YOUR CODE    #
   #######################

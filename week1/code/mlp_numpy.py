@@ -39,7 +39,6 @@ class MLP(object):
     self.layers = list()
     if len(n_hidden) == 0:
       self.layers.append(LinearModule(n_inputs, n_classes))
-      self.layers.append(ReLUModule())
     else:
       for i in range(len(n_hidden)):
         if i  == 0:

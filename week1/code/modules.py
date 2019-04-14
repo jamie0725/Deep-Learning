@@ -80,7 +80,7 @@ class LinearModule(object):
     # PUT YOUR CODE HERE  #
     #######################
     self.grads['weight'] = self.x.T @ dout
-    self.grads['bias'] = np.sum(dout, axis = 0)
+    self.grads['bias'] = np.sum(dout, axis=0)
     dx = dout @ self.params['weight'].T
     ########################
     # END OF YOUR CODE    #
@@ -163,8 +163,8 @@ class SoftMaxModule(object):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    tmp = np.exp(x - np.max(x, axis = 1, keepdims = True))
-    out = tmp / np.sum(tmp, axis = 1, keepdims = True)
+    tmp = np.exp(x - np.max(x, axis=1, keepdims=True))
+    out = tmp / np.sum(tmp, axis=1, keepdims=True)
     self.out = out
     ########################
     # END OF YOUR CODE    #
