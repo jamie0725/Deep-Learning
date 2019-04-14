@@ -109,9 +109,9 @@ def train():
       l_list.append(round(f_loss,3))
     x, y = cifar10['train'].next_batch(FLAGS.batch_size)
     x = x.reshape(FLAGS.batch_size, -1)
-  print('The training losses are:', l_list)
-  print('The training accuracies are:', train_acc)
-  print('The test accuracies are:', test_acc)
+  print('Training Losses:', l_list)
+  print('Training Accuracies:', train_acc)
+  print('Test Accuracies:', test_acc)
   ########################
   # END OF YOUR CODE    #
   #######################
