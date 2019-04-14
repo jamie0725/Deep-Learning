@@ -194,7 +194,6 @@ class SoftMaxModule(object):
       b = self.out[i,:].reshape(-1, 1)
       tmp = np.diagflat(b) - (b @ b.T)
       dx[i,:] = dout[i,:] @ tmp
-
     ########################
     # END OF YOUR CODE    #
     #######################
