@@ -85,7 +85,7 @@ def train():
   x = x.reshape(FLAGS.batch_size, -1)
   n_inputs = x.shape[1]
   n_classes = y.shape[1]
-  n_hidden = FLAGS.dnn_hidden_units
+  n_hidden = dnn_hidden_units
   MutLP = MLP(n_inputs, n_hidden, n_classes)
   loss = CrossEntropyModule()
   l_list = list()
