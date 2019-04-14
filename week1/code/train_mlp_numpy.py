@@ -107,6 +107,8 @@ def train():
       t_x = t_x.reshape(t_x.shape[0], -1)
       t_pred = MutLP.forward(t_x)
       test_acc.append(accuracy(t_pred, t_y))
+    x, y = cifar10['train'].next_batch(FLAGS.batch_size)
+    x = x.reshape(FLAGS.batch_size, -1)
   print('The training losses are:', l_list)
   print('The training accuracies are:', train_acc)
   print('The test accuracies are:', test_acc)
