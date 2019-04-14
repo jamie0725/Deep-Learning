@@ -22,13 +22,16 @@ class LinearModule(object):
     
     Also, initialize gradients with zeros.
     """
-    
+
     ########################
     # PUT YOUR CODE HERE  #
     #######################
     self.params = {'weight': None, 'bias': None}
     self.grads = {'weight': None, 'bias': None}
-    raise NotImplementedError
+    self.params['weight'] = np.random.normal(0, 0.0001, (in_features, out_features))
+    self.params['bias'] = np.zeros(out_features)
+    self.grads['weight'] = np.zeros(in_features, out_features)
+    self.grads['bias'] = np.zeros(out_features)
     ########################
     # END OF YOUR CODE    #
     #######################
@@ -47,11 +50,12 @@ class LinearModule(object):
     
     Hint: You can store intermediate variables inside the object. They can be used in backward pass computation.                                                           #
     """
-    
+
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    self.x = x
+    out = x @ self.params['weight'] + self.params['bias']
     ########################
     # END OF YOUR CODE    #
     #######################
@@ -75,11 +79,13 @@ class LinearModule(object):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    self.grads['weight'] = self.x.T @ dout
+    self.grads['bias'] = np.sum(dout, axis = 0)
+    dx = dout @ self.params['weight'].T
     ########################
     # END OF YOUR CODE    #
     #######################
-    
+
     return dx
 
 class ReLUModule(object):
@@ -104,7 +110,8 @@ class ReLUModule(object):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    self.x = x
+    out =  np.maximum(0, x)
     ########################
     # END OF YOUR CODE    #
     #######################
@@ -127,7 +134,7 @@ class ReLUModule(object):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    dx = dout * np.greater(self.x, 0).astype(int)
     ########################
     # END OF YOUR CODE    #
     #######################    
@@ -156,7 +163,9 @@ class SoftMaxModule(object):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    tmp = np.exp(x - np.max(x, axis = 1, keepdims = True))
+    out = tmp / np.sum(tmp, axis = 1, keepdims = True)
+    self.out = out
     ########################
     # END OF YOUR CODE    #
     #######################
@@ -179,7 +188,13 @@ class SoftMaxModule(object):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    bSize = dout.shape[0]
+    dx = np.zeros(dout.shape)
+    for i in range(bSize):
+      b = self.out[i,:].reshape(-1, 1)
+      tmp = np.diagflat(b) - (b @ b.T)
+      dx[i,:] = dout[i,:] @ tmp
+
     ########################
     # END OF YOUR CODE    #
     #######################
@@ -207,7 +222,7 @@ class CrossEntropyModule(object):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    out = np.sum(-y * np.log(x)) / y.shape[0]
     ########################
     # END OF YOUR CODE    #
     #######################
@@ -231,7 +246,7 @@ class CrossEntropyModule(object):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    dx = - (y / x) / y.shape[0]
     ########################
     # END OF YOUR CODE    #
     #######################
