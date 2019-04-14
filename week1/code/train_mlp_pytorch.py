@@ -98,7 +98,7 @@ def train():
   if FLAGS.optimizer == 'SGD':
     optimizer = optim.SGD(MutLP.parameters(), lr=FLAGS.learning_rate, weight_decay=FLAGS.weight_decay)
   elif FLAGS.optimizer == 'Adam':
-    optimizer = optim.Adam(MutLP.parameters(), FLAGS.learning_rate, weight_decay=FLAGS.weight_decay)
+    optimizer = optim.Adam(MutLP.parameters(), lr=FLAGS.learning_rate, weight_decay=FLAGS.weight_decay)
   else:
     print('Try SGD or Adam...')
   loss = nn.CrossEntropyLoss()
