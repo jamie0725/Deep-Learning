@@ -94,7 +94,6 @@ def train():
   for i in range(FLAGS.max_steps):
     s_pred = MutLP.forward(x)
     f_loss = loss.forward(s_pred, y)
-    l_list.append(f_loss)
     grad = loss.backward(s_pred, y)
     MutLP.backward(grad)
     for layer in MutLP.layers:
@@ -107,6 +106,7 @@ def train():
       t_x = t_x.reshape(t_x.shape[0], -1)
       t_pred = MutLP.forward(t_x)
       test_acc.append(accuracy(t_pred, t_y))
+      l_list.append(round(f_loss,3))
     x, y = cifar10['train'].next_batch(FLAGS.batch_size)
     x = x.reshape(FLAGS.batch_size, -1)
   print('The training losses are:', l_list)

@@ -30,7 +30,7 @@ class LinearModule(object):
     self.grads = {'weight': None, 'bias': None}
     self.params['weight'] = np.random.normal(0, 0.0001, (in_features, out_features))
     self.params['bias'] = np.zeros(out_features)
-    self.grads['weight'] = np.zeros(in_features, out_features)
+    self.grads['weight'] = np.zeros((in_features, out_features))
     self.grads['bias'] = np.zeros(out_features)
     ########################
     # END OF YOUR CODE    #
