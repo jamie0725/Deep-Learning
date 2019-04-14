@@ -11,6 +11,8 @@ import numpy as np
 import os
 from mlp_pytorch import MLP
 import cifar10_utils
+import torch.nn as nn
+import torch.optim as optim
 
 # Default constants
 DNN_HIDDEN_UNITS_DEFAULT = '100'
@@ -45,7 +47,11 @@ def accuracy(predictions, targets):
   ########################
   # PUT YOUR CODE HERE  #
   #######################
-  raise NotImplementedError
+  bSize = targets.shape[0]
+  pred = np.argmax(predictions, axis = 1)
+  label = np.argmax(targets, axis = 1)
+  match = np.equal(pred, label).astype(int)
+  accuracy = np.sum(match) / bSize
   ########################
   # END OF YOUR CODE    #
   #######################
@@ -75,7 +81,38 @@ def train():
   ########################
   # PUT YOUR CODE HERE  #
   #######################
-  raise NotImplementedError
+  cifar10 = cifar10_utils.get_cifar10(FLAGS.data_dir)
+  x, y = cifar10['train'].next_batch(FLAGS.batch_size)
+  x = x.reshape(FLAGS.batch_size, -1)
+  n_inputs = x.shape[1]
+  n_classes = y.shape[1]
+  n_hidden = dnn_hidden_units
+  MutLP = MLP(n_inputs, n_hidden, n_classes)
+  optimizer = optim.Adam(MutLP.parameters(), lr=FLAGS.learning_rate)
+  loss = nn.CrossEntropyLoss()
+  l_list = list()
+  train_acc = list()
+  test_acc = list()
+  print(MutLP)
+  for i in range(FLAGS.max_steps):
+    optimizer.zero_grad()
+    s_pred = MutLP(x)
+    f_loss = loss(s_pred, y)
+    f_loss.backward()
+    optimizer.step()
+    if i % FLAGS.eval_freq == 0:
+      l_list.append(round(f_loss.item(), 3))
+      train_acc.append(accuracy(s_pred, y))
+      t_x, t_y = cifar10['test'].images, cifar10['test'].labels
+      t_x = t_x.reshape(t_x.shape[0], -1)
+      t_pred = MutLP(t_x)
+      test_acc.append(accuracy(t_pred, t_y))
+    x, y = cifar10['train'].next_batch(FLAGS.batch_size)
+    x = x.reshape(FLAGS.batch_size, -1)
+  print('Training Losses:', l_list)
+  print('Training Accuracies:', train_acc)
+  print('Test Accuracies:', test_acc)
+
   ########################
   # END OF YOUR CODE    #
   #######################

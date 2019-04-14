@@ -5,6 +5,7 @@ You should fill in code into indicated sections.
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+import torch.nn as nn
 
 class MLP(nn.Module):
   """
@@ -34,7 +35,21 @@ class MLP(nn.Module):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    super(MLP, self).__init__()
+    self.layers = nn.ModuleList()
+    if len(n_hidden) == 0:
+      self.layers.append(nn.Linear(n_inputs, n_classes, bias=True))
+      self.layers.append(nn.ReLU())
+    else:
+      for i in range(len(n_hidden)):
+        if i == 0:
+          self.layers.append(nn.Linear(n_inputs, n_hidden[i], bias=True))
+          self.layers.append(nn.ReLU())
+        else:
+          self.layers.append(nn.Linear(n_hidden[i-1], n_hidden[i], bias=True))
+          self.layers.append(nn.ReLU())
+      self.layers.append(nn.Linear(n_hidden[-1], n_classes, bias=True))
+      self.layers.append(nn.ReLU())
     ########################
     # END OF YOUR CODE    #
     #######################
@@ -56,7 +71,9 @@ class MLP(nn.Module):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    for layer in self.layers:
+      x = layer(x)
+    out = x
     ########################
     # END OF YOUR CODE    #
     #######################
