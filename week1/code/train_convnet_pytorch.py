@@ -11,6 +11,9 @@ import numpy as np
 import os
 from convnet_pytorch import ConvNet
 import cifar10_utils
+import torch
+import torch.nn as nn
+import torch.optim as optim
 
 # Default constants
 LEARNING_RATE_DEFAULT = 1e-4
@@ -45,7 +48,12 @@ def accuracy(predictions, targets):
   ########################
   # PUT YOUR CODE HERE  #
   #######################
-  raise NotImplementedError
+  match = 0
+  bSize = targets.shape[0]
+  pred = predictions.argmax(dim=1)
+  target = targets.argmax(dim=1)
+  match += (pred == target).sum().item()
+  accuracy = match / bSize
   ########################
   # END OF YOUR CODE    #
   #######################
@@ -67,7 +75,47 @@ def train():
   ########################
   # PUT YOUR CODE HERE  #
   #######################
-  raise NotImplementedError
+  device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+  cifar10 = cifar10_utils.get_cifar10(FLAGS.data_dir)
+  x, y = cifar10['train'].next_batch(FLAGS.batch_size)
+  x = torch.from_numpy(x).float().to(device)
+  y = torch.from_numpy(y).float().to(device)
+  n_classes = y.shape[1]
+  CNN = ConvNet(3, n_classes)
+  CNN.to(device)
+  if OPTIMIZER_DEFAULT == 'SGD':
+    optimizer = optim.SGD(CNN.parameters())
+  elif OPTIMIZER_DEFAULT == 'ADAM':
+    optimizer = optim.Adam(CNN.parameters())
+  else:
+    print('Try SGD or ADAM...')
+  loss = nn.CrossEntropyLoss()
+  l_list = list()
+  train_acc = list()
+  test_acc = list()
+  print('\nTraining...')
+  for i in range(FLAGS.max_steps):
+    optimizer.zero_grad()
+    s_pred = CNN(x)
+    f_loss = loss(s_pred, y.argmax(dim=1))
+    f_loss.backward()
+    optimizer.step()
+    if i % FLAGS.eval_freq == 0:
+      l_list.append(round(f_loss.item(), 3))
+      train_acc.append(accuracy(s_pred, y))
+      t_x, t_y = cifar10['test'].images, cifar10['test'].labels
+      t_x = torch.from_numpy(t_x.reshape(t_x.shape[0], -1)).float().to(device)
+      t_y = torch.from_numpy(t_y).float().to(device)
+      t_pred = CNN(t_x)
+      test_acc.append(accuracy(t_pred, t_y))
+    x, y = cifar10['train'].next_batch(FLAGS.batch_size)
+    x = torch.from_numpy(x.reshape(FLAGS.batch_size, -1)).float().to(device)
+    y = torch.from_numpy(y).float().to(device)
+  print('Done!\n')
+  print('Training Losses:', l_list)
+  print('Training Accuracies:', train_acc)
+  print('Test Accuracies:', test_acc)
+  print('Best Test Accuracy:', max(test_acc))
   ########################
   # END OF YOUR CODE    #
   #######################

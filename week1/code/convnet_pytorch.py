@@ -5,6 +5,8 @@ You should fill in code into indicated sections.
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+import torch.nn as nn
+import torch
 
 class ConvNet(nn.Module):
   """
@@ -29,7 +31,39 @@ class ConvNet(nn.Module):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    self.layers = nn.Sequential(
+      nn.Conv2d(n_channels, 64, 3, 1, padding=1),
+      nn.BatchNorm2d(64),
+      nn.ReLU(),
+      nn.MaxPool2d(3, 2, 1),
+      nn.Conv2d(64, 128, 3, 1, padding=1),
+      nn.BatchNorm2d(128),
+      nn.ReLU(),
+      nn.MaxPool2d(3, 2, 1),
+      nn.Conv2d(128, 256, 3, 1, padding=1),
+      nn.BatchNorm2d(256),
+      nn.ReLU(),
+      nn.Conv2d(256, 256, 3, 1, padding=1),
+      nn.BatchNorm2d(256),
+      nn.ReLU(),
+      nn.MaxPool2d(3, 2, 1),
+      nn.Conv2d(256, 512, 3, 1, padding=1),
+      nn.BatchNorm2d(512),
+      nn.ReLU(),
+      nn.Conv2d(512, 512, 3, 1, padding=1),
+      nn.BatchNorm2d(512),
+      nn.ReLU(),
+      nn.MaxPool2d(3, 2, 1),
+      nn.Conv2d(512, 512, 3, 1, padding=1),
+      nn.BatchNorm2d(512),
+      nn.ReLU(),
+      nn.Conv2d(512, 512, 3, 1, padding=1),
+      nn.BatchNorm2d(512),
+      nn.ReLU(),
+      nn.MaxPool2d(3, 2, 1),
+      nn.AvgPool2d(1, 1, 0),
+      nn.Linear(512, 10, bias=True)
+    )
     ########################
     # END OF YOUR CODE    #
     #######################
@@ -51,7 +85,7 @@ class ConvNet(nn.Module):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    out = self.layers(x)
     ########################
     # END OF YOUR CODE    #
     #######################
