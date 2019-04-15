@@ -63,7 +63,7 @@ class CustomBatchNormAutograd(nn.Module):
     # PUT YOUR CODE HERE  #
     #######################
     n_batch = input.shape[0]
-    mean =  (1 / n_batch) * input.sum(0)
+    mean = (1 / n_batch) * input.sum(0)
     variance = (1 / n_batch) * ((input - mean).pow(2).sum(0))
     norm = (input - mean) / (variance + self.eps).sqrt()
     out = self.gamma * norm + self.beta
