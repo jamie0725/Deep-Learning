@@ -14,6 +14,7 @@ import cifar10_utils
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import matplotlib.pyplot as plt
 
 # Default constants
 DNN_HIDDEN_UNITS_DEFAULT = '100'
@@ -103,6 +104,7 @@ def train():
     print('Try SGD or Adam...')
   loss = nn.CrossEntropyLoss()
   l_list = list()
+  t_list = list()
   train_acc = list()
   test_acc = list()
   print('\nTraining...')
@@ -119,15 +121,30 @@ def train():
       t_x = torch.from_numpy(t_x.reshape(t_x.shape[0], -1)).float().to(device)
       t_y = torch.from_numpy(t_y).float().to(device)
       t_pred = MutLP(t_x)
+      t_loss = loss(t_pred, t_y.argmax(dim=1))
+      t_list.append(round(t_loss.item(), 3))
       test_acc.append(accuracy(t_pred, t_y))
     x, y = cifar10['train'].next_batch(FLAGS.batch_size)
     x = torch.from_numpy(x.reshape(FLAGS.batch_size, -1)).float().to(device)
     y = torch.from_numpy(y).float().to(device)
   print('Done!\n')
   print('Training Losses:', l_list)
+  print('Test Losses:', t_list)
   print('Training Accuracies:', train_acc)
   print('Test Accuracies:', test_acc)
   print('Best Test Accuracy:', max(test_acc))
+  iterations = np.arange(1, len(l_list)+1)
+  fig, axs = plt.subplots(1, 2, figsize=(10,5))
+  axs[0].plot(iterations, train_acc, iterations, test_acc)
+  axs[0].set_xlabel('Iteration')
+  axs[0].set_ylabel('Accuracy')
+  axs[0].legend(('train', 'test'))
+  axs[1].plot(iterations, l_list, iterations, t_list)
+  axs[1].set_xlabel('Iteration')
+  axs[1].set_ylabel('Loss')
+  axs[1].legend(('train', 'test'))
+  fig.tight_layout()
+  plt.show()
   ########################
   # END OF YOUR CODE    #
   #######################

@@ -12,6 +12,7 @@ import os
 from mlp_numpy import MLP
 from modules import CrossEntropyModule
 import cifar10_utils
+import matplotlib.pyplot as plt
 
 # Default constants
 DNN_HIDDEN_UNITS_DEFAULT = '100'
@@ -89,6 +90,7 @@ def train():
   MutLP = MLP(n_inputs, n_hidden, n_classes)
   loss = CrossEntropyModule()
   l_list = list()
+  t_list = list()
   train_acc = list()
   test_acc = list()
   print('\nTraining...')
@@ -106,15 +108,30 @@ def train():
       t_x, t_y = cifar10['test'].images, cifar10['test'].labels
       t_x = t_x.reshape(t_x.shape[0], -1)
       t_pred = MutLP.forward(t_x)
+      t_loss = loss.forward(t_pred, t_y)
+      t_list.append(round(t_loss, 3))
       test_acc.append(accuracy(t_pred, t_y))
       l_list.append(round(f_loss, 3))
     x, y = cifar10['train'].next_batch(FLAGS.batch_size)
     x = x.reshape(FLAGS.batch_size, -1)
   print('Done!\n')
   print('Training Losses:', l_list)
+  print('Test Losses:', t_list)
   print('Training Accuracies:', train_acc)
   print('Test Accuracies:', test_acc)
   print('Best Test Accuracy:', max(test_acc))
+  iterations = np.arange(1, len(l_list)+1)
+  fig, axs = plt.subplots(1, 2, figsize=(10,5))
+  axs[0].plot(iterations, train_acc, iterations, test_acc)
+  axs[0].set_xlabel('Iteration')
+  axs[0].set_ylabel('Accuracy')
+  axs[0].legend(('train', 'test'))
+  axs[1].plot(iterations, l_list, iterations, t_list)
+  axs[1].set_xlabel('Iteration')
+  axs[1].set_ylabel('Loss')
+  axs[1].legend(('train', 'test'))
+  fig.tight_layout()
+  plt.show()
   ########################
   # END OF YOUR CODE    #
   #######################

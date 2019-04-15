@@ -14,6 +14,7 @@ import cifar10_utils
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import matplotlib.pyplot as plt
 
 # Default constants
 LEARNING_RATE_DEFAULT = 1e-4
@@ -81,7 +82,8 @@ def train():
   x = torch.from_numpy(x).float().to(device)
   y = torch.from_numpy(y).float().to(device)
   n_classes = y.shape[1]
-  CNN = ConvNet(3, n_classes)
+  n_channels = x.shape[1]
+  CNN = ConvNet(n_channels, n_classes)
   CNN.to(device)
   if OPTIMIZER_DEFAULT == 'SGD':
     optimizer = optim.SGD(CNN.parameters())
@@ -91,6 +93,7 @@ def train():
     print('Try SGD or ADAM...')
   loss = nn.CrossEntropyLoss()
   l_list = list()
+  t_list = list()
   train_acc = list()
   test_acc = list()
   print('\nTraining...')
@@ -103,19 +106,41 @@ def train():
     if i % FLAGS.eval_freq == 0:
       l_list.append(round(f_loss.item(), 3))
       train_acc.append(accuracy(s_pred, y))
-      t_x, t_y = cifar10['test'].images, cifar10['test'].labels
-      t_x = torch.from_numpy(t_x.reshape(t_x.shape[0], -1)).float().to(device)
-      t_y = torch.from_numpy(t_y).float().to(device)
-      t_pred = CNN(t_x)
-      test_acc.append(accuracy(t_pred, t_y))
+      test_size = cifar10['test'].labels.shape[0]
+      iter_num = 10
+      tmp_size = int(test_size / iter_num)
+      tmp_correct = 0
+      tmp_loss = 0
+      for j in range(iter_num):
+        t_x, t_y = cifar10['test'].next_batch(tmp_size)
+        t_x = torch.from_numpy(t_x).float().to(device)
+        t_y = torch.from_numpy(t_y).float().to(device)
+        t_pred = CNN(t_x)
+        tmp_loss += loss(t_pred, t_y.argmax(dim=1)).item()
+        tmp_correct += accuracy(t_pred, t_y) * tmp_size
+      test_acc.append(tmp_correct/test_size)
+      t_list.append(round(tmp_loss/iter_num, 3))
     x, y = cifar10['train'].next_batch(FLAGS.batch_size)
-    x = torch.from_numpy(x.reshape(FLAGS.batch_size, -1)).float().to(device)
+    x = torch.from_numpy(x).float().to(device)
     y = torch.from_numpy(y).float().to(device)
   print('Done!\n')
   print('Training Losses:', l_list)
+  print('Test Losses:', t_list)
   print('Training Accuracies:', train_acc)
   print('Test Accuracies:', test_acc)
   print('Best Test Accuracy:', max(test_acc))
+  iterations = np.arange(1, len(l_list)+1)
+  fig, axs = plt.subplots(1, 2, figsize=(10,5))
+  axs[0].plot(iterations, train_acc, iterations, test_acc)
+  axs[0].set_xlabel('Iteration')
+  axs[0].set_ylabel('Accuracy')
+  axs[0].legend(('train', 'test'))
+  axs[1].plot(iterations, l_list, iterations, t_list)
+  axs[1].set_xlabel('Iteration')
+  axs[1].set_ylabel('Loss')
+  axs[1].legend(('train', 'test'))
+  fig.tight_layout()
+  plt.show()
   ########################
   # END OF YOUR CODE    #
   #######################

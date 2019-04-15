@@ -31,6 +31,7 @@ class ConvNet(nn.Module):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
+    super(ConvNet, self).__init__()
     self.layers = nn.Sequential(
       nn.Conv2d(n_channels, 64, 3, 1, padding=1),
       nn.BatchNorm2d(64),
@@ -61,9 +62,9 @@ class ConvNet(nn.Module):
       nn.BatchNorm2d(512),
       nn.ReLU(),
       nn.MaxPool2d(3, 2, 1),
-      nn.AvgPool2d(1, 1, 0),
-      nn.Linear(512, 10, bias=True)
+      nn.AvgPool2d(1, 1, 0)
     )
+    self.linear = nn.Linear(512, 10, bias=True)
     ########################
     # END OF YOUR CODE    #
     #######################
@@ -86,6 +87,9 @@ class ConvNet(nn.Module):
     # PUT YOUR CODE HERE  #
     #######################
     out = self.layers(x)
+    out = torch.squeeze(out, 2)
+    out = torch.squeeze(out, 2)
+    out = self.linear(out)
     ########################
     # END OF YOUR CODE    #
     #######################
