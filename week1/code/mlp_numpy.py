@@ -49,7 +49,6 @@ class MLP(object):
         self.layers.append(ReLUModule())
       self.layers.append(LinearModule(n_hidden[-1], n_classes))
     self.layers.append(SoftMaxModule())
-
     ########################
     # END OF YOUR CODE    #
     #######################
