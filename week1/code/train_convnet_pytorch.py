@@ -96,6 +96,7 @@ def train():
   t_list = list()
   train_acc = list()
   test_acc = list()
+  iterations = list()
   print('\nTraining...')
   for i in range(FLAGS.max_steps):
     optimizer.zero_grad()
@@ -104,6 +105,7 @@ def train():
     f_loss.backward()
     optimizer.step()
     if i % FLAGS.eval_freq == 0:
+      iterations.append(i+1)
       l_list.append(round(f_loss.item(), 3))
       train_acc.append(accuracy(s_pred, y))
       test_size = cifar10['test'].labels.shape[0]
@@ -129,7 +131,6 @@ def train():
   print('Training Accuracies:', train_acc)
   print('Test Accuracies:', test_acc)
   print('Best Test Accuracy:', max(test_acc))
-  iterations = np.arange(1, len(l_list)+1)
   fig, axs = plt.subplots(1, 2, figsize=(10,5))
   axs[0].plot(iterations, train_acc, iterations, test_acc)
   axs[0].set_xlabel('Iteration')

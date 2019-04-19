@@ -93,6 +93,7 @@ def train():
   t_list = list()
   train_acc = list()
   test_acc = list()
+  iterations = list()
   print('\nTraining...')
   for i in range(FLAGS.max_steps):
     s_pred = MutLP.forward(x)
@@ -104,6 +105,7 @@ def train():
         layer.params['weight'] -= FLAGS.learning_rate * layer.grads['weight']
         layer.params['bias'] -= FLAGS.learning_rate * layer.grads['bias']
     if i % FLAGS.eval_freq == 0:
+      iterations.append(i+1)
       train_acc.append(accuracy(s_pred, y))
       t_x, t_y = cifar10['test'].images, cifar10['test'].labels
       t_x = t_x.reshape(t_x.shape[0], -1)
@@ -120,7 +122,6 @@ def train():
   print('Training Accuracies:', train_acc)
   print('Test Accuracies:', test_acc)
   print('Best Test Accuracy:', max(test_acc))
-  iterations = np.arange(1, len(l_list)+1)
   fig, axs = plt.subplots(1, 2, figsize=(10,5))
   axs[0].plot(iterations, train_acc, iterations, test_acc)
   axs[0].set_xlabel('Iteration')

@@ -107,6 +107,7 @@ def train():
   t_list = list()
   train_acc = list()
   test_acc = list()
+  iterations = list()
   print('\nTraining...')
   for i in range(FLAGS.max_steps):
     optimizer.zero_grad()
@@ -116,6 +117,7 @@ def train():
     optimizer.step()
     if i % FLAGS.eval_freq == 0:
       l_list.append(round(f_loss.item(), 3))
+      iterations.append(i+1)
       train_acc.append(accuracy(s_pred, y))
       t_x, t_y = cifar10['test'].images, cifar10['test'].labels
       t_x = torch.from_numpy(t_x.reshape(t_x.shape[0], -1)).float().to(device)
@@ -133,7 +135,6 @@ def train():
   print('Training Accuracies:', train_acc)
   print('Test Accuracies:', test_acc)
   print('Best Test Accuracy:', max(test_acc))
-  iterations = np.arange(1, len(l_list)+1)
   fig, axs = plt.subplots(1, 2, figsize=(10,5))
   axs[0].plot(iterations, train_acc, iterations, test_acc)
   axs[0].set_xlabel('Iteration')
