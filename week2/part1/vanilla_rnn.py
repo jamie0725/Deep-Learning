@@ -30,7 +30,6 @@ class VanillaRNN(nn.Module):
 
         # save for forward
         self.seq_length = seq_length
-        self.device = device
 
         # weights
         self.W_hx = nn.Parameter(torch.randn(num_hidden, input_dim))
@@ -38,8 +37,8 @@ class VanillaRNN(nn.Module):
         self.W_ph = nn.Parameter(torch.randn(num_classes, num_hidden))
 
         # bias
-        self.b_h = nn.Parameter(torch.zeros(num_hidden))
-        self.b_p = nn.Parameter(torch.zeros(num_classes))
+        self.b_h = nn.Parameter(torch.zeros(num_hidden, 1))
+        self.b_p = nn.Parameter(torch.zeros(num_classes, 1))
 
         # initial hiddent state
         self.h_i = torch.zeros((num_hidden, batch_size))
@@ -48,7 +47,8 @@ class VanillaRNN(nn.Module):
 
     def forward(self, x):
         h_t = self.h_i
-        for digit in range(len(self.seq_length)):
-            h_t = self.tanh(self.W_hx @ x + self.W_hh @ self.h_t)
+        for i in range(self.seq_length):
+            h_t = self.tanh(self.W_hx @ x[:,i].view(1, -1) + self.W_hh @ h_t + self.b_h)
         out = self.W_ph @ h_t + self.b_p
+        out = out.t()
         return out

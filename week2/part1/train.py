@@ -24,16 +24,47 @@ from datetime import datetime
 import numpy as np
 
 import torch
+import torch.nn as nn
+import torch.optim as optim
 from torch.utils.data import DataLoader
 
-from part1.dataset import PalindromeDataset
-from part1.vanilla_rnn import VanillaRNN
-from part1.lstm import LSTM
+from dataset import PalindromeDataset
+from vanilla_rnn import VanillaRNN
+from lstm import LSTM
 
 # You may want to look into tensorboardX for logging
 # from tensorboardX import SummaryWriter
 
 ################################################################################
+def compute_accuracy(predictions, targets):
+  """
+  Computes the prediction accuracy, i.e. the average of correct predictions
+  of the network.
+  
+  Args:
+    predictions: 2D float array of size [batch_size, n_classes]
+    targets: Ground truth labels for each sample in the batch
+  Returns:
+    accuracy: scalar float, the accuracy of predictions,
+              i.e. the average correct predictions over the whole batch
+  
+  TODO:
+  Implement accuracy computation.
+  """
+
+  ########################
+  # PUT YOUR CODE HERE  #
+  #######################
+  match = 0
+  bSize = targets.shape[0]
+  pred = predictions.argmax(dim=1)
+  match += (pred == targets).sum().item()
+  accuracy = match / bSize
+  ########################
+  # END OF YOUR CODE    #
+  #######################
+
+  return accuracy
 
 def train(config):
 
@@ -43,22 +74,34 @@ def train(config):
     device = torch.device(config.device)
 
     # Initialize the model that we are going to use
-    model = None  # fixme
+    if config.model_type == 'RNN':
+        model = VanillaRNN(config.input_length, config.input_dim, 
+                            config.num_hidden, config.num_classes,
+                            config.batch_size, device)
+    else:
+        raise ValueError('Please try RNN')
+    model.to(device)
 
     # Initialize the dataset and data loader (note the +1)
     dataset = PalindromeDataset(config.input_length+1)
     data_loader = DataLoader(dataset, config.batch_size, num_workers=1)
 
     # Setup the loss and optimizer
-    criterion = None  # fixme
-    optimizer = None  # fixme
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.RMSprop(model.parameters(), lr=config.learning_rate)
+
+    # store best accuracy
+    best_acc = 0.
 
     for step, (batch_inputs, batch_targets) in enumerate(data_loader):
 
         # Only for time measurement of step through network
         t1 = time.time()
 
-        # Add more code here ...
+        optimizer.zero_grad()
+        batch_inputs = batch_inputs.to(device)
+        batch_targets = batch_targets.to(device)
+        pred = model(batch_inputs)
 
         ############################################################################
         # QUESTION: what happens here and why?
@@ -66,10 +109,10 @@ def train(config):
         torch.nn.utils.clip_grad_norm(model.parameters(), max_norm=config.max_norm)
         ############################################################################
 
-        # Add more code here ...
-
-        loss = np.inf   # fixme
-        accuracy = 0.0  # fixme
+        loss = criterion(pred, batch_targets)
+        loss.backward()
+        optimizer.step()
+        accuracy = compute_accuracy(pred, batch_targets)
 
         # Just for time measurement
         t2 = time.time()
@@ -83,6 +126,8 @@ def train(config):
                     config.train_steps, config.batch_size, examples_per_second,
                     accuracy, loss
             ))
+            if accuracy > best_acc:
+                best_acc = accuracy            
 
         if step == config.train_steps:
             # If you receive a PyTorch data-loader error, check this bug report:
@@ -90,6 +135,7 @@ def train(config):
             break
 
     print('Done training.')
+    print('Best accuracy: {}'.format(best_acc))
 
 
  ################################################################################
