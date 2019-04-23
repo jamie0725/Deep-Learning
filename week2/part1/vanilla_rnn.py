@@ -30,6 +30,7 @@ class VanillaRNN(nn.Module):
 
         # save for forward
         self.seq_length = seq_length
+        self.device = device
 
         # weights
         self.W_hx = nn.Parameter(torch.randn(num_hidden, input_dim))
@@ -41,7 +42,7 @@ class VanillaRNN(nn.Module):
         self.b_p = nn.Parameter(torch.zeros(num_classes, 1))
 
         # initial hiddent state
-        self.h_i = torch.zeros((num_hidden, batch_size))
+        self.h_i = nn.Parameter(torch.zeros(num_hidden, batch_size), requires_grad=False)
 
         self.tanh = nn.Tanh()
 

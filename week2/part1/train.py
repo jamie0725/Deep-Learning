@@ -27,6 +27,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
+import matplotlib.pyplot as plt
 
 from dataset import PalindromeDataset
 from vanilla_rnn import VanillaRNN
@@ -90,8 +91,11 @@ def train(config):
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.RMSprop(model.parameters(), lr=config.learning_rate)
 
-    # store best accuracy
+    # Store some measures
     best_acc = 0.
+    los = list()
+    iteration = list()
+    acc = list()
 
     for step, (batch_inputs, batch_targets) in enumerate(data_loader):
 
@@ -116,7 +120,8 @@ def train(config):
 
         # Just for time measurement
         t2 = time.time()
-        examples_per_second = config.batch_size/float(t2-t1)
+        if not float(t2-t1) == 0:
+          examples_per_second = config.batch_size/float(t2-t1)
 
         if step % 10 == 0:
 
@@ -126,6 +131,9 @@ def train(config):
                     config.train_steps, config.batch_size, examples_per_second,
                     accuracy, loss
             ))
+            iteration.append(step)
+            acc.append(accuracy)
+            los.append(loss)
             if accuracy > best_acc:
                 best_acc = accuracy            
 
@@ -136,6 +144,15 @@ def train(config):
 
     print('Done training.')
     print('Best accuracy: {}'.format(best_acc))
+    fig, axs = plt.subplots(1, 2, figsize=(10,5))
+    axs[0].plot(iteration, acc)
+    axs[0].set_xlabel('Iteration')
+    axs[0].set_ylabel('Accuracy')
+    axs[1].plot(iteration, los)
+    axs[1].set_xlabel('Iteration')
+    axs[1].set_ylabel('Loss')
+    fig.tight_layout()
+    plt.show()
 
 
  ################################################################################
