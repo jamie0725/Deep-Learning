@@ -46,6 +46,7 @@ class LSTM(nn.Module):
         self.b_i = nn.Parameter(torch.zeros(num_hidden, 1))
         self.b_f = nn.Parameter(torch.zeros(num_hidden, 1))
         self.b_o = nn.Parameter(torch.zeros(num_hidden, 1))
+        self.b_p = nn.Parameter(torch.zeros(num_classes, 1))
 
         # activation functions
         self.tanh = nn.Tanh()
@@ -66,4 +67,5 @@ class LSTM(nn.Module):
             c_t = g_t * i_t + c_t * f_t
             h_t = self.tanh(c_t) * o_t
         out = self.W_ph @ h_t + self.b_p
+        out = out.t()
         return out

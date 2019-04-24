@@ -71,6 +71,9 @@ def train(config):
 
     assert config.model_type in ('RNN', 'LSTM')
 
+    # Print all configs to confirm parameter settings
+    print_flags()
+
     # Initialize the device which to run the model on
     device = torch.device(config.device)
 
@@ -155,6 +158,13 @@ def train(config):
     axs[1].set_ylabel('Loss')
     fig.tight_layout()
     plt.show()
+
+def print_flags():
+  """
+  Prints all entries in config variable.
+  """
+  for key, value in vars(config).items():
+    print(key + ' : ' + str(value))
 
 
  ################################################################################
