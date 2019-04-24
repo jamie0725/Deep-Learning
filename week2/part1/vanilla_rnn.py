@@ -44,6 +44,7 @@ class VanillaRNN(nn.Module):
         # initial hiddent state
         self.h_i = nn.Parameter(torch.zeros(num_hidden, batch_size), requires_grad=False)
 
+        # activation functions
         self.tanh = nn.Tanh()
 
     def forward(self, x):

@@ -27,6 +27,7 @@ class LSTM(nn.Module):
 
     def __init__(self, seq_length, input_dim, num_hidden, num_classes, batch_size, device='cpu'):
         super(LSTM, self).__init__()
+        
         # save for forward
         self.seq_length = seq_length
 
