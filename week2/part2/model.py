@@ -36,8 +36,10 @@ class TextGenerationModel(nn.Module):
                             num_layers=lstm_num_layers, 
                             bias=True,
                             batch_first=True)
+        self.linear = nn.Linear(lstm_num_hidden, vocabulary_size)
 
 
     def forward(self, x):
-        out = self.model(x)
+        model = self.model(x)
+        out = self.linear(model)
         return out

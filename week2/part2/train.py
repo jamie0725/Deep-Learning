@@ -25,6 +25,7 @@ import argparse
 import numpy as np
 
 import torch
+import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
@@ -35,30 +36,39 @@ from model import TextGenerationModel
 
 def train(config):
 
+    # Print all configs to confirm parameter settings
+    print_flags()
+
     # Initialize the device which to run the model on
     device = torch.device(config.device)
 
     # Initialize the model that we are going to use
-    model = TextGenerationModel( ... )  # fixme
+    model = TextGenerationModel()  # fixme
 
     # Initialize the dataset and data loader (note the +1)
     dataset = TextDataset( ... )  # fixme
     data_loader = DataLoader(dataset, config.batch_size, num_workers=1)
 
     # Setup the loss and optimizer
-    criterion = None  # fixme
-    optimizer = None  # fixme
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
+
+    # Store some measures
+    sen = list()
 
     for step, (batch_inputs, batch_targets) in enumerate(data_loader):
 
         # Only for time measurement of step through network
         t1 = time.time()
 
-        #######################################################
-        # Add more code here ...
-        #######################################################
+        optimizer.zero_grad()
+        batch_inputs = batch_inputs.to(device)
+        batch_targets = batch_targets.to(device)
+        pred = model(batch_inputs)
 
-        loss = np.inf   # fixme
+        loss = criterion(pred, batch_targets)
+        loss.backward()
+        optimizer.step()
         accuracy = 0.0  # fixme
 
         # Just for time measurement
@@ -85,6 +95,12 @@ def train(config):
 
     print('Done training.')
 
+def print_flags():
+  """
+  Prints all entries in config variable.
+  """
+  for key, value in vars(config).items():
+    print(key + ' : ' + str(value))
 
  ################################################################################
  ################################################################################
