@@ -27,8 +27,43 @@ class LSTM(nn.Module):
 
     def __init__(self, seq_length, input_dim, num_hidden, num_classes, batch_size, device='cpu'):
         super(LSTM, self).__init__()
-        # Initialization here ...
+        # save for forward
+        self.seq_length = seq_length
+
+        # weights
+        self.W_gx = nn.Parameter(torch.randn(num_hidden, input_dim))
+        self.W_gh = nn.Parameter(torch.randn(num_hidden, num_hidden))
+        self.W_ix = nn.Parameter(torch.randn(num_hidden, input_dim))
+        self.W_ih = nn.Parameter(torch.randn(num_hidden, num_hidden))
+        self.W_fx = nn.Parameter(torch.randn(num_hidden, input_dim))
+        self.W_fh = nn.Parameter(torch.randn(num_hidden, num_hidden))
+        self.W_ox = nn.Parameter(torch.randn(num_hidden, input_dim))
+        self.W_oh = nn.Parameter(torch.randn(num_hidden, num_hidden))
+        self.W_ph = nn.Parameter(torch.randn(num_classes, num_hidden))
+
+        # bias
+        self.b_g = nn.Parameter(torch.zeros(num_hidden, 1))
+        self.b_i = nn.Parameter(torch.zeros(num_hidden, 1))
+        self.b_f = nn.Parameter(torch.zeros(num_hidden, 1))
+        self.b_o = nn.Parameter(torch.zeros(num_hidden, 1))
+
+        # activation functions
+        self.tanh = nn.Tanh()
+        self.sigmoid = nn.Sigmoid()
+
+        # initial hidden state
+        self.h_i = nn.Parameter(torch.zeros(num_hidden, batch_size), requires_grad=False)
+        self.c_t = nn.Parameter(torch.zeros(num_hidden, batch_size), requires_grad=False)
 
     def forward(self, x):
-        # Implementation here ...
-        pass
+        h_t = self.h_i
+        c_t = self.c_t
+        for i in range(self.seq_length):
+            g_t = self.tanh(self.W_gx @ x[:,i].view(1, -1) + self.W_gh @ h_t + self.b_g)
+            i_t = self.sigmoid(self.W_ix @ x[:,i].view(1, -1) + self.W_ih @ h_t + self.b_i)
+            f_t = self.sigmoid(self.W_fx @ x[:,i].view(1, -1) + self.W_fh @ h_t + self.b_f)
+            o_t = self.sigmoid(self.W_ox @ x[:,i].view(1, -1) + self.W_oh @ h_t + self.b_o)
+            c_t = g_t * i_t + c_t * f_t
+            h_t = self.tanh(c_t) * o_t
+        out = self.W_ph @ h_t + self.b_p
+        return out

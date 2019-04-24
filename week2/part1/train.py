@@ -80,7 +80,9 @@ def train(config):
                             config.num_hidden, config.num_classes,
                             config.batch_size, device)
     else:
-        raise ValueError('Please try RNN')
+        model = LSTM(config.input_length, config.input_dim, 
+                            config.num_hidden, config.num_classes,
+                            config.batch_size, device)
     model.to(device)
 
     # Initialize the dataset and data loader (note the +1)
