@@ -96,12 +96,15 @@ def train(config):
 
     # Setup the loss and optimizer
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.RMSprop(model.parameters(), lr=config.learning_rate)
+    optimizer = optim.RMSprop(model.parameters(), lr=config.learning_rate,
+                              weight_decay=config.weight_decay,
+                              momentum=config.momentum)
 
     # Store some measures
     best_acc = 0.
     los = list()
     iteration = list()
+    tmp_acc = list()
     acc = list()
 
     for step, (batch_inputs, batch_targets) in enumerate(data_loader):
@@ -113,6 +116,8 @@ def train(config):
         batch_inputs = batch_inputs.to(device)
         batch_targets = batch_targets.to(device)
         pred = model(batch_inputs)
+        accuracy = compute_accuracy(pred, batch_targets)
+        tmp_acc.append(accuracy)
         loss = criterion(pred, batch_targets)
         loss.backward()
         ############################################################################
@@ -121,7 +126,6 @@ def train(config):
         torch.nn.utils.clip_grad_norm(model.parameters(), max_norm=config.max_norm)
         ############################################################################
         optimizer.step()
-        accuracy = compute_accuracy(pred, batch_targets)
 
         # Just for time measurement
         t2 = time.time()
@@ -148,9 +152,11 @@ def train(config):
             break
 
     print('Done training.')
-    print('Best accuracy: {}'.format(best_acc))
+    tmp_acc.sort(reverse=True)
+    avg_acc = sum(tmp_acc[:50])/50
+    print('Average of 50 best accuracies: {}'.format(avg_acc))
     with open('result/{}_acc.txt'.format(config.model_type), 'a') as file:
-      file.write('{} {}\n'.format(config.input_length, best_acc))
+      file.write('{} {}\n'.format(config.input_length, avg_acc))
       file.close()
     fig, axs = plt.subplots(1, 2, figsize=(10,5))
     axs[0].plot(iteration, acc)
@@ -189,6 +195,8 @@ if __name__ == "__main__":
     parser.add_argument('--train_steps', type=int, default=10000, help='Number of training steps')
     parser.add_argument('--max_norm', type=float, default=10.0)
     parser.add_argument('--device', type=str, default="cuda:0", help="Training device 'cpu' or 'cuda:0'")
+    parser.add_argument('--momentum', type=float, default="0", help="Momentum of optimizer")
+    parser.add_argument('--weight_decay', type=float, default="0", help="Weight decay of optimizer")
 
     config = parser.parse_args()
 

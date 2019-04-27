@@ -33,8 +33,8 @@ class VanillaRNN(nn.Module):
         self.device = device
 
         # weights
-        self.W_hx = nn.Parameter(torch.randn(num_hidden, input_dim))
-        self.W_hh = nn.Parameter(torch.randn(num_hidden, num_hidden))
+        self.W_hx = nn.Parameter(nn.init.orthogonal_(torch.Tensor(num_hidden, input_dim)))
+        self.W_hh = nn.Parameter(nn.init.orthogonal_(torch.Tensor(num_hidden, num_hidden)))
         self.W_ph = nn.Parameter(torch.randn(num_classes, num_hidden))
 
         # bias
