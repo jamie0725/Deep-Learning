@@ -19,6 +19,8 @@ from __future__ import division
 from __future__ import print_function
 
 import argparse
+import sys
+import os
 import time
 from datetime import datetime
 import numpy as np
@@ -111,15 +113,13 @@ def train(config):
         batch_inputs = batch_inputs.to(device)
         batch_targets = batch_targets.to(device)
         pred = model(batch_inputs)
-
+        loss = criterion(pred, batch_targets)
+        loss.backward()
         ############################################################################
         # QUESTION: what happens here and why?
         ############################################################################
         torch.nn.utils.clip_grad_norm(model.parameters(), max_norm=config.max_norm)
         ############################################################################
-
-        loss = criterion(pred, batch_targets)
-        loss.backward()
         optimizer.step()
         accuracy = compute_accuracy(pred, batch_targets)
 
@@ -149,6 +149,9 @@ def train(config):
 
     print('Done training.')
     print('Best accuracy: {}'.format(best_acc))
+    with open('result/{}_acc.txt'.format(config.model_type), 'a') as file:
+      file.write('{} {}\n'.format(config.input_length, best_acc))
+      file.close()
     fig, axs = plt.subplots(1, 2, figsize=(10,5))
     axs[0].plot(iteration, acc)
     axs[0].set_xlabel('Iteration')

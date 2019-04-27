@@ -57,6 +57,8 @@ class LSTM(nn.Module):
         self.h_i = nn.Parameter(torch.zeros(num_hidden, batch_size), requires_grad=False)
         self.c_t = nn.Parameter(torch.zeros(num_hidden, batch_size), requires_grad=False)
 
+        self.to(device)
+
     def forward(self, x):
         h_t = self.h_i
         c_t = self.c_t

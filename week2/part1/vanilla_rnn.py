@@ -47,6 +47,8 @@ class VanillaRNN(nn.Module):
         # activation functions
         self.tanh = nn.Tanh()
 
+        self.to(device)
+
     def forward(self, x):
         h_t = self.h_i
         for i in range(self.seq_length):
