@@ -34,6 +34,36 @@ from model import TextGenerationModel
 
 ################################################################################
 
+def compute_accuracy(predictions, targets):
+  """
+  Computes the prediction accuracy, i.e. the average of correct predictions
+  of the network.
+  
+  Args:
+    predictions: 2D float array of size [batch_size, n_classes]
+    targets: Ground truth labels for each sample in the batch
+  Returns:
+    accuracy: scalar float, the accuracy of predictions,
+              i.e. the average correct predictions over the whole batch
+  
+  TODO:
+  Implement accuracy computation.
+  """
+
+  ########################
+  # PUT YOUR CODE HERE  #
+  #######################
+  match = 0
+  bSize = targets.shape[1]
+  pred = predictions.argmax(dim=2)
+  match += (pred == targets).sum().item()
+  accuracy = match / bSize
+  ########################
+  # END OF YOUR CODE    #
+  #######################
+
+  return accuracy
+
 def train(config):
 
     # Print all configs to confirm parameter settings
@@ -42,12 +72,20 @@ def train(config):
     # Initialize the device which to run the model on
     device = torch.device(config.device)
 
-    # Initialize the model that we are going to use
-    model = TextGenerationModel()  # fixme
-
     # Initialize the dataset and data loader (note the +1)
-    dataset = TextDataset( ... )  # fixme
+    dataset = TextDataset(filename=config.txt_file,
+                          seq_length=config.seq_length)
     data_loader = DataLoader(dataset, config.batch_size, num_workers=1)
+
+    # Initialize the model that we are going to use
+    model = TextGenerationModel(batch_size=config.batch_size,
+                                seq_length=config.seq_length,
+                                vocabulary_size=dataset.vocab_size,
+                                dropout=1-config.dropout_keep_prob,
+                                lstm_num_hidden=config.lstm_num_hidden,
+                                lstm_num_layers=config.lstm_num_layers,
+                                device=device)
+    model.to(device)
 
     # Setup the loss and optimizer
     criterion = nn.CrossEntropyLoss()
@@ -62,14 +100,19 @@ def train(config):
         t1 = time.time()
 
         optimizer.zero_grad()
-        batch_inputs = batch_inputs.to(device)
-        batch_targets = batch_targets.to(device)
-        pred = model(batch_inputs)
 
+        batch_inputs = torch.stack(batch_inputs).to(device)
+        batch_targets = torch.stack(batch_targets).to(device)
+
+        pred = model(batch_inputs)
+        accuracy = compute_accuracy(pred, batch_targets)
+        pred = pred.permute(1, 2, 0)
+        batch_targets = batch_targets.permute(1, 0)
         loss = criterion(pred, batch_targets)
+        print(accuracy, loss.item())
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=config.max_norm)
         optimizer.step()
-        accuracy = 0.0  # fixme
 
         # Just for time measurement
         t2 = time.time()
@@ -84,7 +127,7 @@ def train(config):
                     accuracy, loss
             ))
 
-        if step == config.sample_every:
+        if step % config.sample_every == 0:
             # Generate some sentences by sampling from the model
             pass
 
@@ -132,6 +175,7 @@ if __name__ == "__main__":
     parser.add_argument('--summary_path', type=str, default="./summaries/", help='Output path for summaries')
     parser.add_argument('--print_every', type=int, default=5, help='How often to print training progress')
     parser.add_argument('--sample_every', type=int, default=100, help='How often to sample from the model')
+    parser.add_argument('--device', type=str, default="cuda:0", help="Training device 'cpu' or 'cuda:0'")
 
     config = parser.parse_args()
 
