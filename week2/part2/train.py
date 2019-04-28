@@ -28,6 +28,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
+import matplotlib.pyplot as plt
 
 from dataset import TextDataset
 from model import TextGenerationModel
@@ -92,7 +93,9 @@ def train(config):
     optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
 
     # Store some measures
-    sen = list()
+    los = list()
+    iteration = list()
+    acc = list()
 
     for step, (batch_inputs, batch_targets) in enumerate(data_loader):
 
@@ -125,6 +128,9 @@ def train(config):
                     config.train_steps, config.batch_size, examples_per_second,
                     accuracy, loss
             ))
+            iteration.append(step)
+            acc.append(accuracy)
+            los.append(loss)
 
         if step % config.sample_every == 0:
             # Generate some sentences by sampling from the model
@@ -136,6 +142,15 @@ def train(config):
             break
 
     print('Done training.')
+    fig, axs = plt.subplots(1, 2, figsize=(10,5))
+    axs[0].plot(iteration, acc)
+    axs[0].set_xlabel('Iteration')
+    axs[0].set_ylabel('Accuracy')
+    axs[1].plot(iteration, los)
+    axs[1].set_xlabel('Iteration')
+    axs[1].set_ylabel('Loss')
+    fig.tight_layout()
+    plt.show()
 
 def print_flags():
   """
