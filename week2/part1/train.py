@@ -39,6 +39,7 @@ from lstm import LSTM
 # from tensorboardX import SummaryWriter
 
 ################################################################################
+
 def compute_accuracy(predictions, targets):
   """
   Computes the prediction accuracy, i.e. the average of correct predictions
