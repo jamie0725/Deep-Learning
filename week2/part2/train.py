@@ -109,7 +109,6 @@ def train(config):
         pred = pred.permute(1, 2, 0)
         batch_targets = batch_targets.permute(1, 0)
         loss = criterion(pred, batch_targets)
-        print(accuracy, loss.item())
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=config.max_norm)
         optimizer.step()
