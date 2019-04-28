@@ -117,7 +117,6 @@ def train(config):
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=config.max_norm)
         optimizer.step()
 
-
         # Just for time measurement
         t2 = time.time()
         examples_per_second = config.batch_size/float(t2-t1)
