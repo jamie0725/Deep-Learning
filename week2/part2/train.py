@@ -18,6 +18,7 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+import sys
 import time
 from datetime import datetime
 import argparse
@@ -113,6 +114,7 @@ def train(config):
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=config.max_norm)
         optimizer.step()
 
+
         # Just for time measurement
         t2 = time.time()
         examples_per_second = config.batch_size/float(t2-t1)
@@ -122,13 +124,15 @@ def train(config):
             print("[{}] Train Step {:04d}/{:04d}, Batch Size = {}, Examples/Sec = {:.2f}, "
                   "Accuracy = {:.2f}, Loss = {:.3f}".format(
                     datetime.now().strftime("%Y-%m-%d %H:%M"), step,
-                    config.train_steps, config.batch_size, examples_per_second,
+                    int(config.train_steps), config.batch_size, examples_per_second,
                     accuracy, loss
             ))
 
         if step % config.sample_every == 0:
-            # Generate some sentences by sampling from the model
-            pass
+            # with open('./result/generate.txt', 'a') as file:
+            #   file.write()
+            #   file.close()
+            pass        
 
         if step == config.train_steps:
             # If you receive a PyTorch data-loader error, check this bug report:
