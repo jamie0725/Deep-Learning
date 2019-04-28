@@ -56,10 +56,10 @@ def compute_accuracy(predictions, targets):
   # PUT YOUR CODE HERE  #
   #######################
   match = 0
-  bSize = targets.shape[1]
+  size = targets.shape[0] * targets.shape[1]
   pred = predictions.argmax(dim=2)
   match += (pred == targets).sum().item()
-  accuracy = match / bSize
+  accuracy = match / size
   ########################
   # END OF YOUR CODE    #
   #######################
