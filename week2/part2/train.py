@@ -124,7 +124,7 @@ def train(config):
           t2 = time.time()
           examples_per_second = config.batch_size/float(t2-t1)
 
-          if step % config.print_every == 0:
+          if (step+i*max_step) % config.print_every == 0:
 
               print("[{}] Train Step {:04d}/{:04d}, Batch Size = {}, Examples/Sec = {:.2f}, "
                     "Accuracy = {:.2f}, Loss = {:.3f}".format(
@@ -132,22 +132,25 @@ def train(config):
                       int(config.train_steps), config.batch_size, examples_per_second,
                       accuracy, loss
               ))
-              iteration.append(step)
+              iteration.append(step+i*max_step)
               acc.append(accuracy)
               los.append(loss)
               if max_step < step:
                 max_step = step
 
-          if step % config.sample_every == 0:
+          if (step+i*max_step) % config.sample_every == 0:
               # with open('./result/generate.txt', 'a') as file:
               #   file.write()
               #   file.close()
               pass        
 
-          if step == config.train_steps:
+          if (step+i*max_step) == config.train_steps:
               # If you receive a PyTorch data-loader error, check this bug report:
               # https://github.com/pytorch/pytorch/pull/9655
               break
+
+      if (step+i*max_step) == config.train_steps:
+        break
 
     print('Done training.')
     fig, axs = plt.subplots(1, 2, figsize=(10,5))
