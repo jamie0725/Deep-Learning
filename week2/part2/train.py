@@ -92,57 +92,59 @@ def train(config):
     # Setup the loss and optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
+    epoch = 10
 
     # Store some measures
     los = list()
     iteration = list()
     acc = list()
 
-    for step, (batch_inputs, batch_targets) in enumerate(data_loader):
+    for i in range(epoch):
+      for step, (batch_inputs, batch_targets) in enumerate(data_loader):
 
-        # Only for time measurement of step through network
-        t1 = time.time()
+          # Only for time measurement of step through network
+          t1 = time.time()
 
-        optimizer.zero_grad()
+          optimizer.zero_grad()
 
-        batch_inputs = torch.stack(batch_inputs).to(device)
-        batch_targets = torch.stack(batch_targets).to(device)
+          batch_inputs = torch.stack(batch_inputs).to(device)
+          batch_targets = torch.stack(batch_targets).to(device)
 
-        pred = model(batch_inputs)
-        accuracy = compute_accuracy(pred, batch_targets)
-        pred = pred.permute(1, 2, 0)
-        batch_targets = batch_targets.permute(1, 0)
-        loss = criterion(pred, batch_targets)
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=config.max_norm)
-        optimizer.step()
+          pred = model(batch_inputs)
+          accuracy = compute_accuracy(pred, batch_targets)
+          pred = pred.permute(1, 2, 0)
+          batch_targets = batch_targets.permute(1, 0)
+          loss = criterion(pred, batch_targets)
+          loss.backward()
+          torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=config.max_norm)
+          optimizer.step()
 
-        # Just for time measurement
-        t2 = time.time()
-        examples_per_second = config.batch_size/float(t2-t1)
+          # Just for time measurement
+          t2 = time.time()
+          examples_per_second = config.batch_size/float(t2-t1)
 
-        if step % config.print_every == 0:
+          if step % config.print_every == 0:
 
-            print("[{}] Train Step {:04d}/{:04d}, Batch Size = {}, Examples/Sec = {:.2f}, "
-                  "Accuracy = {:.2f}, Loss = {:.3f}".format(
-                    datetime.now().strftime("%Y-%m-%d %H:%M"), step,
-                    int(config.train_steps), config.batch_size, examples_per_second,
-                    accuracy, loss
-            ))
-            iteration.append(step)
-            acc.append(accuracy)
-            los.append(loss)
+              print("[{}] Train Step {:04d}/{:04d}, Batch Size = {}, Examples/Sec = {:.2f}, "
+                    "Accuracy = {:.2f}, Loss = {:.3f}".format(
+                      datetime.now().strftime("%Y-%m-%d %H:%M"), step,
+                      int(config.train_steps), config.batch_size, examples_per_second,
+                      accuracy, loss
+              ))
+              iteration.append(step)
+              acc.append(accuracy)
+              los.append(loss)
 
-        if step % config.sample_every == 0:
-            # with open('./result/generate.txt', 'a') as file:
-            #   file.write()
-            #   file.close()
-            pass        
+          if step % config.sample_every == 0:
+              with open('./result/generate.txt', 'a') as file:
+                file.write()
+                file.close()
+              pass        
 
-        if step == config.train_steps:
-            # If you receive a PyTorch data-loader error, check this bug report:
-            # https://github.com/pytorch/pytorch/pull/9655
-            break
+          if step == config.train_steps:
+              # If you receive a PyTorch data-loader error, check this bug report:
+              # https://github.com/pytorch/pytorch/pull/9655
+              break
 
     print('Done training.')
     fig, axs = plt.subplots(1, 2, figsize=(10,5))
