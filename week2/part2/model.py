@@ -42,11 +42,13 @@ class TextGenerationModel(nn.Module):
                              dropout=dropout)
         self.linear = nn.Linear(lstm_num_hidden, vocabulary_size)
 
+        self.h_p = None
+
         self.to(device)
 
 
-    def forward(self, x):
+    def forward(self, x, h, c):
         embed = self.embedding(x)
-        model, (h_n, c_n) = self.model(embed)
+        model, (h_n, c_n) = self.model(embed, (h, c))
         out = self.linear(model)
-        return out
+        return out, h_n, c_n

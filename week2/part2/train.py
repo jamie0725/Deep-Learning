@@ -106,12 +106,16 @@ def train(config):
           # Only for time measurement of step through network
           t1 = time.time()
 
+          model.train()
           optimizer.zero_grad()
 
           batch_inputs = torch.stack(batch_inputs).to(device)
           batch_targets = torch.stack(batch_targets).to(device)
 
-          pred = model(batch_inputs)
+          h_0 = torch.zeros(config.seq_length, config.batch_size, config.lstm_num_hidden)
+          c_0 = torch.zeros(config.seq_length, config.batch_size, config.lstm_num_hidden)
+
+          pred, _ = model(batch_inputs, (h_0, c_0))
           accuracy = compute_accuracy(pred, batch_targets)
           pred = pred.permute(1, 2, 0)
           batch_targets = batch_targets.permute(1, 0)
@@ -139,9 +143,20 @@ def train(config):
                 max_step = step
 
           if (step+i*max_step) % config.sample_every == 0:
-              # with open('./result/generate.txt', 'a') as file:
-              #   file.write()
-              #   file.close()
+              model.eval()
+              batch_sample = 5
+              rand_chars = [dataset._char_to_ix[random.choice(dataset._chars)] for c in range(batch_sample)]
+              print(rand_chars)
+              break
+              for l in range(config.genreate_length):
+                if l == 0:
+                  h = torch.zeros(1, 5, config.lstm_num_hidden)
+                  c = torch.zeros(1, 5, config.lstm_num_hidden)
+                  gen, (h_n, c_n) = model(, (h, c))
+                
+              with open('./result/generate.txt', 'a') as file:
+                file.write()
+                file.close()
               pass        
 
           if (step+i*max_step) == config.train_steps:
@@ -187,6 +202,7 @@ if __name__ == "__main__":
     # Training params
     parser.add_argument('--batch_size', type=int, default=64, help='Number of examples to process in a batch')
     parser.add_argument('--learning_rate', type=float, default=2e-3, help='Learning rate')
+    parser.add_argument('--genreate_length', type=int, default=30, help='Length of genreated sentence')
 
     # It is not necessary to implement the following three params, but it may help training.
     parser.add_argument('--learning_rate_decay', type=float, default=0.96, help='Learning rate decay fraction')
