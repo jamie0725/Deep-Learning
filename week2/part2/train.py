@@ -24,6 +24,7 @@ from datetime import datetime
 import argparse
 
 import numpy as np
+import random
 
 import torch
 import torch.nn as nn
@@ -112,10 +113,10 @@ def train(config):
           batch_inputs = torch.stack(batch_inputs).to(device)
           batch_targets = torch.stack(batch_targets).to(device)
 
-          h_0 = torch.zeros(config.seq_length, config.batch_size, config.lstm_num_hidden)
-          c_0 = torch.zeros(config.seq_length, config.batch_size, config.lstm_num_hidden)
+          h_0 = torch.zeros(config.lstm_num_layers, batch_inputs.shape[1], config.lstm_num_hidden).to(device)
+          c_0 = torch.zeros(config.lstm_num_layers, batch_inputs.shape[1], config.lstm_num_hidden).to(device)
 
-          pred, _ = model(batch_inputs, (h_0, c_0))
+          pred, _, _ = model(batch_inputs, h_0, c_0)
           accuracy = compute_accuracy(pred, batch_targets)
           pred = pred.permute(1, 2, 0)
           batch_targets = batch_targets.permute(1, 0)
@@ -128,43 +129,51 @@ def train(config):
           t2 = time.time()
           examples_per_second = config.batch_size/float(t2-t1)
 
-          if (step+i*max_step) % config.print_every == 0:
+          if (step + i * max_step) % config.print_every == 0:
 
               print("[{}] Train Step {:04d}/{:04d}, Batch Size = {}, Examples/Sec = {:.2f}, "
                     "Accuracy = {:.2f}, Loss = {:.3f}".format(
-                      datetime.now().strftime("%Y-%m-%d %H:%M"), step+i*max_step,
+                      datetime.now().strftime("%Y-%m-%d %H:%M"), step + i * max_step,
                       int(config.train_steps), config.batch_size, examples_per_second,
                       accuracy, loss
               ))
-              iteration.append(step+i*max_step)
+              iteration.append(step + i * max_step)
               acc.append(accuracy)
               los.append(loss)
               if max_step < step:
                 max_step = step
 
-          if (step+i*max_step) % config.sample_every == 0:
+          if (step + i * max_step) % config.sample_every == 0:
               model.eval()
               batch_sample = 5
-              rand_chars = [dataset._char_to_ix[random.choice(dataset._chars)] for c in range(batch_sample)]
-              print(rand_chars)
-              break
-              for l in range(config.genreate_length):
+              generated = [dataset._char_to_ix[random.choice(dataset._chars)] for c in range(batch_sample)]
+              generated = torch.LongTensor(generated).view(-1, batch_sample).to(device)
+              for l in range(config.genreate_length - 1):
                 if l == 0:
-                  h = torch.zeros(1, 5, config.lstm_num_hidden)
-                  c = torch.zeros(1, 5, config.lstm_num_hidden)
-                  gen, (h_n, c_n) = model(, (h, c))
-                
-              with open('./result/generate.txt', 'a') as file:
-                file.write()
-                file.close()
-              pass        
+                  h_s = torch.zeros(config.lstm_num_layers, batch_sample, config.lstm_num_hidden).to(device)
+                  c_s = torch.zeros(config.lstm_num_layers, batch_sample, config.lstm_num_hidden).to(device)
+                  gen, h_s, c_s = model(generated, h_s, c_s)
+                else:
+                  gen, h_s, c_s = model(gen, h_s, c_s)
+                gen = gen.argmax(dim=2)
+                generated = torch.cat((generated, gen))
+              generated = generated.t()
+              sentence = [dataset.convert_to_string(idx) for idx in generated.tolist()]
+              with open('{}/generate_{}.txt'.format(config.summary_path, datetime.now().strftime("%Y-%m-%d")), 'a', encoding='utf-8') as file:
+                file.write('--------------\n')
+                file.write('Training Step: {}\n'.format(step + i * max_step))
+                file.write('--------------\n')
+                for sen in sentence:
+                  file.write('{}\n'.format(sen))
+                file.write('\n')
+                file.close()   
 
-          if (step+i*max_step) == config.train_steps:
+          if (step + i * max_step) == config.train_steps:
               # If you receive a PyTorch data-loader error, check this bug report:
               # https://github.com/pytorch/pytorch/pull/9655
               break
 
-      if (step+i*max_step) == config.train_steps:
+      if (step + i * max_step) == config.train_steps:
         break
 
     print('Done training.')
