@@ -149,7 +149,7 @@ def train(config):
               batch_sample = 5
               generated = [dataset._char_to_ix[random.choice(dataset._chars)] for c in range(batch_sample)]
               generated = torch.LongTensor(generated).view(-1, batch_sample).to(device)
-              for l in range(config.genreate_length - 1):
+              for l in range(config.generate_length - 1):
                 if l == 0:
                   h_s = torch.zeros(config.lstm_num_layers, batch_sample, config.lstm_num_hidden).to(device)
                   c_s = torch.zeros(config.lstm_num_layers, batch_sample, config.lstm_num_hidden).to(device)
