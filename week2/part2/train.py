@@ -227,7 +227,7 @@ if __name__ == "__main__":
     # Training params
     parser.add_argument('--batch_size', type=int, default=64, help='Number of examples to process in a batch')
     parser.add_argument('--learning_rate', type=float, default=2e-3, help='Learning rate')
-    parser.add_argument('--genreate_length', type=int, default=30, help='Length of genreated sentence')
+    parser.add_argument('--generate_length', type=int, default=30, help='Length of genreated sentence')
     parser.add_argument('--sampling_method', type=str, default="greedy", help='Method of sampling')
     parser.add_argument('--temperature', type=float, default=1.0, help='Temperature of sampling')
 
