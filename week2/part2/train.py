@@ -71,6 +71,7 @@ def train(config):
 
     # Print all configs to confirm parameter settings
     print_flags()
+    assert config.sampling_method in ('greedy', 'random')
 
     # Initialize the device which to run the model on
     device = torch.device(config.device)
@@ -155,7 +156,10 @@ def train(config):
                   gen, h_s, c_s = model(generated, h_s, c_s)
                 else:
                   gen, h_s, c_s = model(gen, h_s, c_s)
-                gen = gen.argmax(dim=2)
+                if config.sampling_method == 'greedy':
+                  gen = gen.argmax(dim=2)
+                else:
+                  gen = np.exp(-gen/config.temperature)
                 generated = torch.cat((generated, gen))
               generated = generated.t()
               sentence = [dataset.convert_to_string(idx) for idx in generated.tolist()]
@@ -212,6 +216,8 @@ if __name__ == "__main__":
     parser.add_argument('--batch_size', type=int, default=64, help='Number of examples to process in a batch')
     parser.add_argument('--learning_rate', type=float, default=2e-3, help='Learning rate')
     parser.add_argument('--genreate_length', type=int, default=30, help='Length of genreated sentence')
+    parser.add_argument('--sampling_method', type=str, default="greedy", help='Method of sampling')
+    parser.add_argument('--temperature', type=float, default=1.0, help='Temperature of sampling')
 
     # It is not necessary to implement the following three params, but it may help training.
     parser.add_argument('--learning_rate_decay', type=float, default=0.96, help='Learning rate decay fraction')
