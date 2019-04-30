@@ -159,18 +159,30 @@ def train(config):
                 if config.sampling_method == 'greedy':
                   gen = gen.argmax(dim=2)
                 else:
-                  gen = np.exp(-gen/config.temperature)
+                  gen = nn.functional.softmax(gen/config.temperature, dim=2)
+                  dist = torch.distributions.categorical.Categorical(gen)
+                  gen = dist.sample()
                 generated = torch.cat((generated, gen))
               generated = generated.t()
               sentence = [dataset.convert_to_string(idx) for idx in generated.tolist()]
-              with open('{}/generate_{}.txt'.format(config.summary_path, datetime.now().strftime("%Y-%m-%d")), 'a', encoding='utf-8') as file:
-                file.write('--------------\n')
-                file.write('Training Step: {}\n'.format(step + i * max_step))
-                file.write('--------------\n')
-                for sen in sentence:
-                  file.write('{}\n'.format(sen))
-                file.write('\n')
-                file.close()   
+              if config.sampling_method == 'random':
+                with open('{}/generate_{}_{}_{}.txt'.format(config.summary_path, datetime.now().strftime("%Y-%m-%d"), config.sampling_method, config.temperature), 'a', encoding='utf-8') as file:
+                  file.write('--------------\n')
+                  file.write('Training Step: {}\n'.format(step + i * max_step))
+                  file.write('--------------\n')
+                  for sen in sentence:
+                    file.write('{}\n'.format(sen))
+                  file.write('\n')
+                  file.close()   
+              else:
+                with open('{}/generate_{}_{}.txt'.format(config.summary_path, datetime.now().strftime("%Y-%m-%d"), config.sampling_method), 'a', encoding='utf-8') as file:
+                  file.write('--------------\n')
+                  file.write('Training Step: {}\n'.format(step + i * max_step))
+                  file.write('--------------\n')
+                  for sen in sentence:
+                    file.write('{}\n'.format(sen))
+                  file.write('\n')
+                  file.close()
 
           if (step + i * max_step) == config.train_steps:
               # If you receive a PyTorch data-loader error, check this bug report:
