@@ -72,6 +72,7 @@ def train(config):
     # Print all configs to confirm parameter settings
     print_flags()
     assert config.sampling_method in ('greedy', 'random')
+    assert config.generate_mode in ('generate', 'finish')
 
     # Initialize the device which to run the model on
     device = torch.device(config.device)
@@ -147,26 +148,45 @@ def train(config):
           if (step + i * max_step) % config.sample_every == 0:
               model.eval()
               batch_sample = 5
-              generated = [dataset._char_to_ix[random.choice(dataset._chars)] for c in range(batch_sample)]
-              generated = torch.LongTensor(generated).view(-1, batch_sample).to(device)
-              for l in range(config.generate_length - 1):
-                if l == 0:
-                  h_s = torch.zeros(config.lstm_num_layers, batch_sample, config.lstm_num_hidden).to(device)
-                  c_s = torch.zeros(config.lstm_num_layers, batch_sample, config.lstm_num_hidden).to(device)
-                  gen, h_s, c_s = model(generated, h_s, c_s)
-                else:
-                  gen, h_s, c_s = model(gen, h_s, c_s)
-                if config.sampling_method == 'greedy':
-                  gen = gen.argmax(dim=2)
-                else:
-                  gen = nn.functional.softmax(gen/config.temperature, dim=2)
-                  dist = torch.distributions.categorical.Categorical(gen)
-                  gen = dist.sample()
-                generated = torch.cat((generated, gen))
+              if config.generate_mode == 'finish':
+                generated = [dataset._char_to_ix[c] for c in config.input_seq]
+                generated = torch.LongTensor(generated).view(-1, 1).to(device)
+                for l in range(config.generate_length):
+                  if l == 0:
+                    h_s = torch.zeros(config.lstm_num_layers, 1, config.lstm_num_hidden).to(device)
+                    c_s = torch.zeros(config.lstm_num_layers, 1, config.lstm_num_hidden).to(device)
+                    gen, h_s, c_s = model(generated, h_s, c_s)
+                    gen = torch.unsqueeze(gen[-1], 0)
+                  else:
+                    gen, h_s, c_s = model(gen, h_s, c_s)
+                  if config.sampling_method == 'greedy':
+                    gen = gen.argmax(dim=2)
+                  else:
+                    gen = nn.functional.softmax(gen/config.temperature, dim=2)
+                    dist = torch.distributions.categorical.Categorical(gen)
+                    gen = dist.sample()
+                  generated = torch.cat((generated, gen))
+              else:
+                generated = [dataset._char_to_ix[random.choice(dataset._chars)] for c in range(batch_sample)]
+                generated = torch.LongTensor(generated).view(-1, batch_sample).to(device)
+                for l in range(config.generate_length - 1):
+                  if l == 0:
+                    h_s = torch.zeros(config.lstm_num_layers, batch_sample, config.lstm_num_hidden).to(device)
+                    c_s = torch.zeros(config.lstm_num_layers, batch_sample, config.lstm_num_hidden).to(device)
+                    gen, h_s, c_s = model(generated, h_s, c_s)
+                  else:
+                    gen, h_s, c_s = model(gen, h_s, c_s)
+                  if config.sampling_method == 'greedy':
+                    gen = gen.argmax(dim=2)
+                  else:
+                    gen = nn.functional.softmax(gen/config.temperature, dim=2)
+                    dist = torch.distributions.categorical.Categorical(gen)
+                    gen = dist.sample()
+                  generated = torch.cat((generated, gen))
               generated = generated.t()
               sentence = [dataset.convert_to_string(idx) for idx in generated.tolist()]
               if config.sampling_method == 'random':
-                with open('{}/generate_{}_{}_{}.txt'.format(config.summary_path, datetime.now().strftime("%Y-%m-%d"), config.sampling_method, config.temperature), 'a', encoding='utf-8') as file:
+                with open('{}/{}_{}_{}_{}.txt'.format(config.summary_path, config.generate_mode, datetime.now().strftime("%Y-%m-%d"), config.sampling_method, config.temperature), 'a', encoding='utf-8') as file:
                   file.write('--------------\n')
                   file.write('Training Step: {}\n'.format(step + i * max_step))
                   file.write('--------------\n')
@@ -175,7 +195,7 @@ def train(config):
                   file.write('\n')
                   file.close()   
               else:
-                with open('{}/generate_{}_{}.txt'.format(config.summary_path, datetime.now().strftime("%Y-%m-%d"), config.sampling_method), 'a', encoding='utf-8') as file:
+                with open('{}/{}_{}_{}.txt'.format(config.summary_path, config.generate_mode, datetime.now().strftime("%Y-%m-%d"), config.sampling_method), 'a', encoding='utf-8') as file:
                   file.write('--------------\n')
                   file.write('Training Step: {}\n'.format(step + i * max_step))
                   file.write('--------------\n')
@@ -227,9 +247,11 @@ if __name__ == "__main__":
     # Training params
     parser.add_argument('--batch_size', type=int, default=64, help='Number of examples to process in a batch')
     parser.add_argument('--learning_rate', type=float, default=2e-3, help='Learning rate')
-    parser.add_argument('--generate_length', type=int, default=30, help='Length of genreated sentence')
-    parser.add_argument('--sampling_method', type=str, default="greedy", help='Method of sampling')
+    parser.add_argument('--generate_length', type=int, default=30, help='Length of generated sentence')
+    parser.add_argument('--sampling_method', type=str, default="greedy", help='Method of sampling (greedy or random)')
     parser.add_argument('--temperature', type=float, default=1.0, help='Temperature of sampling')
+    parser.add_argument('--input_seq', type=str, default="Sleeping beauty is", help='Finish sentence')
+    parser.add_argument('--generate_mode', type=str, default="generate", help='Generate mode (generate or finish)')
 
     # It is not necessary to implement the following three params, but it may help training.
     parser.add_argument('--learning_rate_decay', type=float, default=0.96, help='Learning rate decay fraction')

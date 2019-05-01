@@ -27,9 +27,6 @@ class TextGenerationModel(nn.Module):
 
         super(TextGenerationModel, self).__init__()
 
-        # save for forward
-        self.seq_length = seq_length
-
         # embedding
         self.embedding = nn.Embedding(num_embeddings=vocabulary_size,
                                       embedding_dim=lstm_num_hidden)
