@@ -75,21 +75,35 @@ class Discriminator(nn.Module):
 
 
 def train(dataloader, discriminator, generator, optimizer_G, optimizer_D):
+    criterion = nn.BCELoss()
     for epoch in range(args.n_epochs):
         for i, (imgs, _) in enumerate(dataloader):
 
             imgs.cuda()
+            real_target = torch.ones(args.batch_size, 1).cuda()
+            fake_target = torch.zeros(zrgs.batch_size, 1).cuda()
+            target = torch.cat((real_target, fake_target))
 
             # Train Generator
             # ---------------
             optimizer_G.zero_grad()
-            noise = torch.randn(args.batch_size, args.latent_dim)
+            noise = torch.randn(args.batch_size, args.latent_dim).cuda()
             gen = generator(noise)
+            pred = discrininator(gen)
+            loss_E = criterion(pred, fake_target)
+            loss_E.backward()
+            optimizer_G.step()
+
 
             # Train Discriminator
             # -------------------
             optimizer_D.zero_grad()
-            pred = discriminator(gen)
+            pred_real = discriminator(imgs)
+            loss_D = criterion(pred_real, real_target)
+            pred_fake = discriminator(gen)
+            loss_D += criterion(pred_fake, fake_target)
+            loss_D.backward()
+            optimizer_D.step()
 
             # Save Images
             # -----------
