@@ -81,15 +81,14 @@ def train(dataloader, discriminator, generator, optimizer_G, optimizer_D):
 
             imgs.cuda()
             real_target = torch.ones(args.batch_size, 1).cuda()
-            fake_target = torch.zeros(zrgs.batch_size, 1).cuda()
-            target = torch.cat((real_target, fake_target))
+            fake_target = torch.zeros(args.batch_size, 1).cuda()
 
             # Train Generator
             # ---------------
             optimizer_G.zero_grad()
             noise = torch.randn(args.batch_size, args.latent_dim).cuda()
-            gen = generator(noise)
-            pred = discrininator(gen)
+            gen_imgs = generator(noise)
+            pred = discriminator(gen_imgs)
             loss_E = criterion(pred, fake_target)
             loss_E.backward()
             optimizer_G.step()
@@ -100,7 +99,7 @@ def train(dataloader, discriminator, generator, optimizer_G, optimizer_D):
             optimizer_D.zero_grad()
             pred_real = discriminator(imgs)
             loss_D = criterion(pred_real, real_target)
-            pred_fake = discriminator(gen)
+            pred_fake = discriminator(gen_imgs)
             loss_D += criterion(pred_fake, fake_target)
             loss_D.backward()
             optimizer_D.step()
@@ -115,7 +114,9 @@ def train(dataloader, discriminator, generator, optimizer_G, optimizer_D):
                 # save_image(gen_imgs[:25],
                 #            'images/{}.png'.format(batches_done),
                 #            nrow=5, normalize=True)
-                pass
+                save_image(gen_imgs[:25],
+                           './images/{}.png'.format(batches_done),
+                           nrow=5, normalize=True)
 
 
 def main():
