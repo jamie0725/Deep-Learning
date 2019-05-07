@@ -27,10 +27,25 @@ class Generator(nn.Module):
         #   LeakyReLU(0.2)
         #   Linear 1024 -> 768
         #   Output non-linearity
+        self.gen = nn.Sequential(
+            nn.Linear(args.latent_dim, 128),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Linear(128, 256),
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Linear(256, 512),
+            nn.BatchNorm2d(512),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Linear(512, 1024),
+            nn.BatchNorm2d(1024),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Linear(1024, 768),
+            nn.Tanh()
+        )
 
     def forward(self, z):
-        # Generate images from z
-        pass
+        out = self.gen(z)
+        return out
 
 
 class Discriminator(nn.Module):
@@ -45,10 +60,18 @@ class Discriminator(nn.Module):
         #   LeakyReLU(0.2)
         #   Linear 256 -> 1
         #   Output non-linearity
+        self.dis = nn.Sequential(
+            nn.Linear(784, 512),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Linear(512, 256),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Linear(256, 1),
+            nn.Sigmoid()
+        )
 
     def forward(self, img):
-        # return discriminator score for img
-        pass
+        out = self.dis(img)
+        return out
 
 
 def train(dataloader, discriminator, generator, optimizer_G, optimizer_D):
@@ -59,10 +82,14 @@ def train(dataloader, discriminator, generator, optimizer_G, optimizer_D):
 
             # Train Generator
             # ---------------
+            optimizer_G.zero_grad()
+            noise = torch.randn(args.batch_size, args.latent_dim)
+            gen = generator(noise)
 
             # Train Discriminator
             # -------------------
             optimizer_D.zero_grad()
+            pred = discriminator(gen)
 
             # Save Images
             # -----------
