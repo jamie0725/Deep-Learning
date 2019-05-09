@@ -154,6 +154,8 @@ def print_flags():
 
 def main():
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    assert args.mode in ('train', 'eval')
+
     # Create output image directory
     os.makedirs('images', exist_ok=True)
 
@@ -172,11 +174,30 @@ def main():
     optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=args.lr)
 
     # Start training
-    train(dataloader, discriminator, generator, optimizer_G, optimizer_D, device)
+    if args.mode == 'train':
+        train(dataloader, discriminator, generator, optimizer_G, optimizer_D, device)
 
-    # You can save your generator here to re-use it to generate images for your
-    # report, e.g.:
-    # torch.save(generator.state_dict(), "mnist_generator.pt")
+        # You can save your generator here to re-use it to generate images for your
+        # report, e.g.:
+        torch.save(generator.state_dict(), "./models/gan_mnist_generator.pt")
+
+    else:
+        step = 8
+        generator.load_state_dict(torch.load('./models/gan_mnist_generator.pt'))
+        noise = torch.randn(2, args.latent_dim).to(device)
+        start = noise[0].unsqueeze(0)
+        end = noise[1].unsqueeze(0)
+        diff = end - start
+        noise = start
+        for i in range(1, step):
+            tmp = start + (i / step) * diff
+            noise = torch.cat((noise, tmp))
+        noise = torch.cat((noise, end))
+        gen_imgs = generator(noise)
+        save_image(gen_imgs.view(gen_imgs.shape[0], 1, 28, 28),
+                    './images/interpolation.png',
+                    nrow=gen_imgs.shape[0], normalize=True)
+
 
 
 if __name__ == "__main__":
@@ -191,6 +212,8 @@ if __name__ == "__main__":
                         help='dimensionality of the latent space')
     parser.add_argument('--save_interval', type=int, default=500,
                         help='save every SAVE_INTERVAL iterations')
+    parser.add_argument('--mode', type=str, default='train',
+                        help='train or eval')
     args = parser.parse_args()
 
     main()
