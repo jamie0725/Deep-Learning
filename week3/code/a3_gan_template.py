@@ -141,7 +141,7 @@ def train(dataloader, discriminator, generator, optimizer_G, optimizer_D, device
                 #            'images/{}.png'.format(batches_done),
                 #            nrow=5, normalize=True)
                 save_image(gen_imgs.view(img_nr, 1, 28, 28)[:25],
-                           './images/{}.png'.format(batches_done),
+                           './images/gan/{}.png'.format(batches_done),
                            nrow=5, normalize=True)
 
 
@@ -157,7 +157,7 @@ def main():
     assert args.mode in ('train', 'eval')
 
     # Create output image directory
-    os.makedirs('images', exist_ok=True)
+    os.makedirs('images/gan', exist_ok=True)
 
     # load data
     dataloader = torch.utils.data.DataLoader(
@@ -195,7 +195,7 @@ def main():
         noise = torch.cat((noise, end))
         gen_imgs = generator(noise)
         save_image(gen_imgs.view(gen_imgs.shape[0], 1, 28, 28),
-                    './images/interpolation.png',
+                    './images/gan/interpolation.png',
                     nrow=gen_imgs.shape[0], normalize=True)
 
 
