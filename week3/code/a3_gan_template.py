@@ -3,6 +3,8 @@ import os
 
 import torch
 import torch.nn as nn
+import time
+from datetime import datetime
 import torchvision.transforms as transforms
 from torchvision.utils import save_image
 from torchvision import datasets
@@ -31,15 +33,15 @@ class Generator(nn.Module):
             nn.Linear(args.latent_dim, 128),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Linear(128, 256),
-            nn.BatchNorm2d(256),
+            nn.BatchNorm1d(256),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Linear(256, 512),
-            nn.BatchNorm2d(512),
+            nn.BatchNorm1d(512),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Linear(512, 1024),
-            nn.BatchNorm2d(1024),
+            nn.BatchNorm1d(1024),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Linear(1024, 768),
+            nn.Linear(1024, 784),
             nn.Tanh()
         )
 
@@ -63,6 +65,7 @@ class Discriminator(nn.Module):
         self.dis = nn.Sequential(
             nn.Linear(784, 512),
             nn.LeakyReLU(0.2, inplace=True),
+            nn.Dropout(),
             nn.Linear(512, 256),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Linear(256, 1),
@@ -74,35 +77,58 @@ class Discriminator(nn.Module):
         return out
 
 
-def train(dataloader, discriminator, generator, optimizer_G, optimizer_D):
-    criterion = nn.BCELoss()
+def train(dataloader, discriminator, generator, optimizer_G, optimizer_D, device):
+    # Print all configs to confirm parameter settings
+    print_flags()
+
+    # Define loss function
+    criterion_G = nn.BCELoss()
+    criterion_D = nn.BCELoss()
     for epoch in range(args.n_epochs):
         for i, (imgs, _) in enumerate(dataloader):
 
-            imgs.cuda()
-            real_target = torch.ones(args.batch_size, 1).cuda()
-            fake_target = torch.zeros(args.batch_size, 1).cuda()
+            t1 = time.time()
 
-            # Train Generator
-            # ---------------
-            optimizer_G.zero_grad()
-            noise = torch.randn(args.batch_size, args.latent_dim).cuda()
-            gen_imgs = generator(noise)
-            pred = discriminator(gen_imgs)
-            loss_E = criterion(pred, fake_target)
-            loss_E.backward()
-            optimizer_G.step()
-
+            imgs.to(device)
+            img_nr = imgs.shape[0]
+            real_target = torch.FloatTensor(img_nr, 1).uniform_(0.7, 1.2).to(device)
+            fake_target = torch.FloatTensor(img_nr, 1).uniform_(0., 0.3).to(device)
+            
+            noise = torch.randn(img_nr, args.latent_dim).to(device)
+            gen_imgs = generator(noise).to(device)
 
             # Train Discriminator
             # -------------------
             optimizer_D.zero_grad()
-            pred_real = discriminator(imgs)
-            loss_D = criterion(pred_real, real_target)
+            flatten_imgs = imgs.view(img_nr, -1).to(device)
+            pred_real = discriminator(flatten_imgs)
+            loss_D_real = criterion_D(pred_real, real_target)
             pred_fake = discriminator(gen_imgs)
-            loss_D += criterion(pred_fake, fake_target)
-            loss_D.backward()
+            loss_D_fake = criterion_D(pred_fake, fake_target)
+            loss_D = loss_D_real + loss_D_fake
+            loss_D.backward(retain_graph=True)
             optimizer_D.step()
+
+            # Train Generator
+            # ---------------
+            optimizer_G.zero_grad()
+            pred = discriminator(gen_imgs)
+            loss_G = criterion_G(pred, real_target)
+            loss_G.backward()
+            optimizer_G.step()
+
+            t2 = time.time()
+
+            # Print statements
+            examples_per_second = img_nr/float(t2-t1)
+            if i % 10 == 0:
+                print("[{}] Train Epoch {}, Train Step {:04d}/{:04d}, Batch Size = {}, Examples/Sec = {:.2f}, "
+                    "D_Loss = {:.2f}, G_Loss = {:.3f}".format(
+                        datetime.now().strftime("%Y-%m-%d %H:%M"), epoch, i,
+                        len(dataloader), img_nr, examples_per_second,
+                        loss_D, loss_G
+
+                ))
 
             # Save Images
             # -----------
@@ -114,12 +140,20 @@ def train(dataloader, discriminator, generator, optimizer_G, optimizer_D):
                 # save_image(gen_imgs[:25],
                 #            'images/{}.png'.format(batches_done),
                 #            nrow=5, normalize=True)
-                save_image(gen_imgs[:25],
+                save_image(gen_imgs.view(img_nr, 1, 28, 28)[:25],
                            './images/{}.png'.format(batches_done),
                            nrow=5, normalize=True)
 
 
+def print_flags():
+  """
+  Prints all entries in args variable.
+  """
+  for key, value in vars(args).items():
+    print(key + ' : ' + str(value))
+
 def main():
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     # Create output image directory
     os.makedirs('images', exist_ok=True)
 
@@ -128,18 +162,17 @@ def main():
         datasets.MNIST('./data/mnist', train=True, download=True,
                        transform=transforms.Compose([
                            transforms.ToTensor(),
-                           transforms.Normalize((0.5, 0.5, 0.5),
-                                                (0.5, 0.5, 0.5))])),
+                           transforms.Normalize((0.5,),(0.5,))])),
         batch_size=args.batch_size, shuffle=True)
 
     # Initialize models and optimizers
-    generator = Generator()
-    discriminator = Discriminator()
+    generator = Generator().to(device)
+    discriminator = Discriminator().to(device)
     optimizer_G = torch.optim.Adam(generator.parameters(), lr=args.lr)
     optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=args.lr)
 
     # Start training
-    train(dataloader, discriminator, generator, optimizer_G, optimizer_D)
+    train(dataloader, discriminator, generator, optimizer_G, optimizer_D, device)
 
     # You can save your generator here to re-use it to generate images for your
     # report, e.g.:
