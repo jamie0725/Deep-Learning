@@ -2,6 +2,7 @@ import argparse
 
 import torch
 import torch.nn as nn
+import time
 import matplotlib.pyplot as plt
 from torchvision.utils import make_grid
 
@@ -21,7 +22,7 @@ class Encoder(nn.Module):
         that any constraints are enforced.
         """
         mean, std = None, None
-        raise NotImplementedError()
+        
 
         return mean, std
 
@@ -33,24 +34,24 @@ class Decoder(nn.Module):
 
     def forward(self, input):
         """
-        Perform forward pass of encoder.
+        Perform forward pass of decoder.
 
         Returns mean with shape [batch_size, 784].
         """
         mean = None
-        raise NotImplementedError()
+        
 
         return mean
 
 
 class VAE(nn.Module):
 
-    def __init__(self, hidden_dim=500, z_dim=20):
+    def __init__(self, hidden_dim=500, z_dim=20, device='cuda:0'):
         super().__init__()
 
         self.z_dim = z_dim
-        self.encoder = Encoder(hidden_dim, z_dim)
-        self.decoder = Decoder(hidden_dim, z_dim)
+        self.encoder = Encoder(hidden_dim, z_dim).to(device)
+        self.decoder = Decoder(hidden_dim, z_dim).to(device)
 
     def forward(self, input):
         """
@@ -86,11 +87,14 @@ def epoch_iter(model, data, optimizer):
     return average_epoch_elbo
 
 
-def run_epoch(model, data, optimizer):
+def run_epoch(model, data, optimizer, device):
     """
     Run a train and validation epoch and return average elbo for each.
     """
     traindata, valdata = data
+
+    traindata = traindata.to(device)
+    valdata = valdata.to(device)
 
     model.train()
     train_elbo = epoch_iter(model, traindata, optimizer)
@@ -113,13 +117,16 @@ def save_elbo_plot(train_curve, val_curve, filename):
 
 
 def main():
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    # Print all configs to confirm parameter settings
+    print_flags()
     data = bmnist()[:2]  # ignore test split
-    model = VAE(z_dim=ARGS.zdim)
+    model = VAE(z_dim=ARGS.zdim, device=device).to(device)
     optimizer = torch.optim.Adam(model.parameters())
 
     train_curve, val_curve = [], []
     for epoch in range(ARGS.epochs):
-        elbos = run_epoch(model, data, optimizer)
+        elbos = run_epoch(model, data, optimizer, device)
         train_elbo, val_elbo = elbos
         train_curve.append(train_elbo)
         val_curve.append(val_elbo)
@@ -136,8 +143,14 @@ def main():
     #  functionality that is already imported.
     # --------------------------------------------------------------------
 
-    save_elbo_plot(train_curve, val_curve, 'elbo.pdf')
+    save_elbo_plot(train_curve, val_curve, './images/elbo.eps')
 
+def print_flags():
+  """
+  Prints all entries in args variable.
+  """
+  for key, value in vars(ARGS).items():
+    print(key + ' : ' + str(value))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
