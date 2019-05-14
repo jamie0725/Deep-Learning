@@ -13,6 +13,9 @@ class Encoder(nn.Module):
 
     def __init__(self, hidden_dim=500, z_dim=20):
         super().__init__()
+        self.i2h = nn.Linear(784, hidden_dim)
+        self.h2z = nn.Linear(hidden_dim, z_dim)
+        self.relu = nn.ReLU(True)
 
     def forward(self, input):
         """
@@ -21,16 +24,22 @@ class Encoder(nn.Module):
         Returns mean and std with shape [batch_size, z_dim]. Make sure
         that any constraints are enforced.
         """
-        mean, std = None, None
+        out = self.i2h(input)
+        out =  self.relu(out)
+        mean = self.h2z(out)
+        logvar = self.h2z(out)
         
-
-        return mean, std
+        return mean, logvar
 
 
 class Decoder(nn.Module):
 
     def __init__(self, hidden_dim=500, z_dim=20):
         super().__init__()
+        self.z2h = nn.Linear(z_dim, hidden_dim)
+        self.h2i = nn.Linear(hidden_dim, 784)
+        self.relu = nn.ReLU(True)
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, input):
         """
@@ -38,9 +47,11 @@ class Decoder(nn.Module):
 
         Returns mean with shape [batch_size, 784].
         """
-        mean = None
+        out = self.z2h(input)
+        out = self.relu(out)
+        mean = self.h2i(out)
+        mean = self.sigmoid(mean)
         
-
         return mean
 
 
@@ -58,8 +69,14 @@ class VAE(nn.Module):
         Given input, perform an encoding and decoding step and return the
         negative average elbo for the given batch.
         """
-        average_negative_elbo = None
-        raise NotImplementedError()
+        mean, logvar = self.encoder(input)
+        epsilon = torch.randn(mean.shape)
+        z = mean + torch.exp(0.5 * logvar) * epsilon
+        rc_input = self.decoder(z)
+        rc_loss = torch.log(rc_input)
+        r_loss = -0.5 * torch.sum(1 + logvar - mean.pow(2) - logvar.exp())
+        average_negative_elbo = (rc_loss + r_loss) / input.shape[0]
+        
         return average_negative_elbo
 
     def sample(self, n_samples):
@@ -69,7 +86,7 @@ class VAE(nn.Module):
         used to plot the data manifold).
         """
         sampled_ims, im_means = None, None
-        raise NotImplementedError()
+        
 
         return sampled_ims, im_means
 
@@ -92,9 +109,6 @@ def run_epoch(model, data, optimizer, device):
     Run a train and validation epoch and return average elbo for each.
     """
     traindata, valdata = data
-
-    traindata = traindata.to(device)
-    valdata = valdata.to(device)
 
     model.train()
     train_elbo = epoch_iter(model, traindata, optimizer)
