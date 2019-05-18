@@ -5,7 +5,7 @@ import torch.nn as nn
 import time
 import matplotlib.pyplot as plt
 from torchvision.utils import make_grid
-
+from torchvision.utils import save_image
 from datasets.bmnist import bmnist
 
 
@@ -61,6 +61,7 @@ class VAE(nn.Module):
         super().__init__()
 
         self.z_dim = z_dim
+        self.device = device
         self.encoder = Encoder(hidden_dim, z_dim).to(device)
         self.decoder = Decoder(hidden_dim, z_dim).to(device)
 
@@ -73,8 +74,8 @@ class VAE(nn.Module):
         epsilon = torch.randn(mean.shape)
         z = mean + torch.exp(0.5 * logvar) * epsilon
         rc_input = self.decoder(z)
-        rc_loss = torch.log(rc_input)
-        r_loss = -0.5 * torch.sum(1 + logvar - mean.pow(2) - logvar.exp())
+        rc_loss = torch.nn.functional.binary_cross_entropy(rc_input, input, reduction='sum')
+        r_loss = 0.5 * torch.sum(logvar.exp() + mean.pow(2) - 1 - logvar)
         average_negative_elbo = (rc_loss + r_loss) / input.shape[0]
         
         return average_negative_elbo
@@ -85,8 +86,10 @@ class VAE(nn.Module):
         (from bernoulli) and the means for these bernoullis (as these are
         used to plot the data manifold).
         """
-        sampled_ims, im_means = None, None
-        
+        sampled_zs = torch.randn(n_samples, self.z_dim).to(self.device)
+        means = self.decoder(sampled_zs)
+        sampled_ims = torch.bernoulli(means)
+        im_means = means
 
         return sampled_ims, im_means
 
@@ -98,9 +101,11 @@ def epoch_iter(model, data, optimizer):
 
     Returns the average elbo for the complete epoch.
     """
-    average_epoch_elbo = None
-    raise NotImplementedError()
-
+    if model.training:
+        optimizer.zero_grad()
+        average_epoch_elbo = 0
+        optimizer.step()
+    
     return average_epoch_elbo
 
 
@@ -109,6 +114,7 @@ def run_epoch(model, data, optimizer, device):
     Run a train and validation epoch and return average elbo for each.
     """
     traindata, valdata = data
+    print(traindata)
 
     model.train()
     train_elbo = epoch_iter(model, traindata, optimizer)
@@ -150,13 +156,18 @@ def main():
         #  Add functionality to plot samples from model during training.
         #  You can use the make_grid functioanlity that is already imported.
         # --------------------------------------------------------------------
+        im_samples, _ = model.sample(25)
+        save_image(im_samples.view(im_samples.shape[0], 1, 28, 28),
+                    './images/vae/{}.png'.format(epoch),
+                    nrow=5, normalize=True)
 
     # --------------------------------------------------------------------
     #  Add functionality to plot plot the learned data manifold after
     #  if required (i.e., if zdim == 2). You can use the make_grid
     #  functionality that is already imported.
     # --------------------------------------------------------------------
-
+    if ARGS.z_dim == 2:
+        pass
     save_elbo_plot(train_curve, val_curve, './images/elbo.eps')
 
 def print_flags():
