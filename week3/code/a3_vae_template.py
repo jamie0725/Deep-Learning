@@ -74,7 +74,7 @@ class VAE(nn.Module):
         epsilon = torch.randn(mean.shape)
         z = mean + torch.exp(0.5 * logvar) * epsilon
         rc_input = self.decoder(z)
-        rc_loss = torch.nn.functional.binary_cross_entropy(rc_input, input, reduction='sum')
+        rc_loss = torch.nn.functional.binary_cross_entropy_with_logits(rc_input, input, reduction='sum')
         r_loss = 0.5 * torch.sum(logvar.exp() + mean.pow(2) - 1 - logvar)
         average_negative_elbo = (rc_loss + r_loss) / input.shape[0]
         
@@ -101,10 +101,21 @@ def epoch_iter(model, data, optimizer):
 
     Returns the average elbo for the complete epoch.
     """
+    average_epoch_elbo = 0.
     if model.training:
-        optimizer.zero_grad()
-        average_epoch_elbo = 0
-        optimizer.step()
+        for i, imgs in enumerate(data):
+            imgs = imgs.view(-1, 784)
+            optimizer.zero_grad()
+            loss = model(imgs)
+            loss.backward()
+            optimizer.step()
+            average_epoch_elbo += loss
+    else:
+        for i, imgs in enumerate(data):
+            imgs = imgs.view(-1, 784)
+            loss = model(imgs)
+            average_epoch_elbo += loss
+    average_epoch_elbo /= len(data)
     
     return average_epoch_elbo
 
@@ -114,7 +125,6 @@ def run_epoch(model, data, optimizer, device):
     Run a train and validation epoch and return average elbo for each.
     """
     traindata, valdata = data
-    print(traindata)
 
     model.train()
     train_elbo = epoch_iter(model, traindata, optimizer)
