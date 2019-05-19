@@ -11,11 +11,12 @@ from datasets.bmnist import bmnist
 
 class Encoder(nn.Module):
 
-    def __init__(self, hidden_dim=500, z_dim=20):
+    def __init__(self, hidden_dim=500, z_dim=20, device='cuda:0'):
         super().__init__()
         self.i2h = nn.Linear(784, hidden_dim)
         self.h2z = nn.Linear(hidden_dim, z_dim)
-        self.relu = nn.ReLU(True)
+        self.relu = nn.ReLU()
+        self.to(device)
 
     def forward(self, input):
         """
@@ -34,12 +35,13 @@ class Encoder(nn.Module):
 
 class Decoder(nn.Module):
 
-    def __init__(self, hidden_dim=500, z_dim=20):
+    def __init__(self, hidden_dim=500, z_dim=20, device='cuda:0'):
         super().__init__()
         self.z2h = nn.Linear(z_dim, hidden_dim)
         self.h2i = nn.Linear(hidden_dim, 784)
-        self.relu = nn.ReLU(True)
+        self.relu = nn.ReLU()
         self.sigmoid = nn.Sigmoid()
+        self.to(device)
 
     def forward(self, input):
         """
@@ -62,8 +64,9 @@ class VAE(nn.Module):
 
         self.z_dim = z_dim
         self.device = device
-        self.encoder = Encoder(hidden_dim, z_dim).to(device)
-        self.decoder = Decoder(hidden_dim, z_dim).to(device)
+        self.encoder = Encoder(hidden_dim, z_dim, device).to(device)
+        self.decoder = Decoder(hidden_dim, z_dim, device).to(device)
+        self.to(device)
 
     def forward(self, input):
         """
@@ -71,10 +74,10 @@ class VAE(nn.Module):
         negative average elbo for the given batch.
         """
         mean, logvar = self.encoder(input)
-        epsilon = torch.randn(mean.shape)
+        epsilon = torch.randn(mean.shape).to(self.device)
         z = mean + torch.exp(0.5 * logvar) * epsilon
         rc_input = self.decoder(z)
-        rc_loss = torch.nn.functional.binary_cross_entropy_with_logits(rc_input, input, reduction='sum')
+        rc_loss = torch.nn.functional.binary_cross_entropy(rc_input, input, reduction='sum')
         r_loss = 0.5 * torch.sum(logvar.exp() + mean.pow(2) - 1 - logvar)
         average_negative_elbo = (rc_loss + r_loss) / input.shape[0]
         
@@ -94,7 +97,7 @@ class VAE(nn.Module):
         return sampled_ims, im_means
 
 
-def epoch_iter(model, data, optimizer):
+def epoch_iter(model, data, optimizer, device):
     """
     Perform a single epoch for either the training or validation.
     use model.training to determine if in 'training mode' or not.
@@ -104,17 +107,17 @@ def epoch_iter(model, data, optimizer):
     average_epoch_elbo = 0.
     if model.training:
         for i, imgs in enumerate(data):
-            imgs = imgs.view(-1, 784)
+            imgs = imgs.view(-1, 784).to(device)
             optimizer.zero_grad()
             loss = model(imgs)
             loss.backward()
             optimizer.step()
-            average_epoch_elbo += loss
+            average_epoch_elbo += loss.item()
     else:
         for i, imgs in enumerate(data):
-            imgs = imgs.view(-1, 784)
+            imgs = imgs.view(-1, 784).to(device)
             loss = model(imgs)
-            average_epoch_elbo += loss
+            average_epoch_elbo += loss.item()
     average_epoch_elbo /= len(data)
     
     return average_epoch_elbo
@@ -127,10 +130,10 @@ def run_epoch(model, data, optimizer, device):
     traindata, valdata = data
 
     model.train()
-    train_elbo = epoch_iter(model, traindata, optimizer)
+    train_elbo = epoch_iter(model, traindata, optimizer, device)
 
     model.eval()
-    val_elbo = epoch_iter(model, valdata, optimizer)
+    val_elbo = epoch_iter(model, valdata, optimizer, device)
 
     return train_elbo, val_elbo
 
@@ -166,7 +169,7 @@ def main():
         #  Add functionality to plot samples from model during training.
         #  You can use the make_grid functioanlity that is already imported.
         # --------------------------------------------------------------------
-        im_samples, _ = model.sample(25)
+        _, im_samples = model.sample(25)
         save_image(im_samples.view(im_samples.shape[0], 1, 28, 28),
                     './images/vae/{}.png'.format(epoch),
                     nrow=5, normalize=True)
@@ -176,9 +179,10 @@ def main():
     #  if required (i.e., if zdim == 2). You can use the make_grid
     #  functionality that is already imported.
     # --------------------------------------------------------------------
-    if ARGS.z_dim == 2:
+    if ARGS.zdim == 2:
         pass
-    save_elbo_plot(train_curve, val_curve, './images/elbo.eps')
+    save_elbo_plot(train_curve, val_curve, './images/vae/elbo.png')
+    save_elbo_plot(train_curve, val_curve, './images/vae/elbo.eps')
 
 def print_flags():
   """
