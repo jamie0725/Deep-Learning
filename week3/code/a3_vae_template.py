@@ -1,12 +1,14 @@
 import argparse
 
 import torch
+import numpy as np
 import torch.nn as nn
 import time
 import matplotlib.pyplot as plt
 from torchvision.utils import make_grid
 from torchvision.utils import save_image
 from datasets.bmnist import bmnist
+from scipy.stats import norm
 
 
 class Encoder(nn.Module):
@@ -14,7 +16,8 @@ class Encoder(nn.Module):
     def __init__(self, hidden_dim=500, z_dim=20, device='cuda:0'):
         super().__init__()
         self.i2h = nn.Linear(784, hidden_dim)
-        self.h2z = nn.Linear(hidden_dim, z_dim)
+        self.h2z1 = nn.Linear(hidden_dim, z_dim)
+        self.h2z2 = nn.Linear(hidden_dim, z_dim)
         self.relu = nn.ReLU()
         self.to(device)
 
@@ -27,8 +30,8 @@ class Encoder(nn.Module):
         """
         out = self.i2h(input)
         out =  self.relu(out)
-        mean = self.h2z(out)
-        logvar = self.h2z(out)
+        mean = self.h2z1(out)
+        logvar = self.h2z2(out)
         
         return mean, logvar
 
@@ -76,7 +79,7 @@ class VAE(nn.Module):
         mean, logvar = self.encoder(input)
         epsilon = torch.randn(mean.shape).to(self.device)
         z = mean + torch.exp(0.5 * logvar) * epsilon
-        rc_input = self.decoder(z)
+        rc_input = self.decoder(z) # Here we follow the original paper to use the means as the recon input without sampling from the Bernoulli distribution
         rc_loss = torch.nn.functional.binary_cross_entropy(rc_input, input, reduction='sum')
         r_loss = 0.5 * torch.sum(logvar.exp() + mean.pow(2) - 1 - logvar)
         average_negative_elbo = (rc_loss + r_loss) / input.shape[0]
@@ -169,10 +172,14 @@ def main():
         #  Add functionality to plot samples from model during training.
         #  You can use the make_grid functioanlity that is already imported.
         # --------------------------------------------------------------------
-        _, im_samples = model.sample(25)
-        save_image(im_samples.view(im_samples.shape[0], 1, 28, 28),
-                    './images/vae/{}.png'.format(epoch),
-                    nrow=5, normalize=True)
+        if ARGS.zdim != 2:
+            im_samples, means_samples = model.sample(25)
+            save_image(im_samples.view(im_samples.shape[0], 1, 28, 28),
+                       './images/vae/bernoulli_{}.png'.format(epoch),
+                       nrow=5, normalize=True)
+            save_image(means_samples.view(means_samples.shape[0], 1, 28, 28),
+                       './images/vae/mean_{}.png'.format(epoch),
+                       nrow=5, normalize=True)
 
     # --------------------------------------------------------------------
     #  Add functionality to plot plot the learned data manifold after
@@ -180,9 +187,18 @@ def main():
     #  functionality that is already imported.
     # --------------------------------------------------------------------
     if ARGS.zdim == 2:
-        pass
-    save_elbo_plot(train_curve, val_curve, './images/vae/elbo.png')
-    save_elbo_plot(train_curve, val_curve, './images/vae/elbo.eps')
+        model.eval()
+        x_values = norm.ppf(np.linspace(0.0001, 0.9999, 15))
+        y_values = norm.ppf(np.linspace(0.0001, 0.9999, 15))
+        manifold = torch.FloatTensor(np.array(np.meshgrid(x_values, y_values)).T).view(-1, 2).to(device)
+        with torch.no_grad():
+            imgs = model.decoder(manifold)
+        save_image(imgs.view(imgs.shape[0], 1, 28, 28),
+                   './images/vae/manifold.png'.format(epoch),
+                   nrow=15, normalize=True)
+
+    save_elbo_plot(train_curve, val_curve, './images/vae/elbo_zdim-{}.png'.format(ARGS.zdim))
+    save_elbo_plot(train_curve, val_curve, './images/vae/elbo_zdim-{}.eps'.format(ARGS.zdim))
 
 def print_flags():
   """
