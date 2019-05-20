@@ -89,7 +89,7 @@ def train(dataloader, discriminator, generator, optimizer_G, optimizer_D, device
 
             t1 = time.time()
 
-            imgs.to(device)
+            imgs = imgs.to(device)
             img_nr = imgs.shape[0]
             real_target = torch.FloatTensor(img_nr, 1).uniform_(0.7, 1.2).to(device)
             fake_target = torch.FloatTensor(img_nr, 1).uniform_(0., 0.3).to(device)
