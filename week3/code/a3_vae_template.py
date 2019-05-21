@@ -1,4 +1,5 @@
 import argparse
+import os
 
 import torch
 import numpy as np
@@ -159,6 +160,9 @@ def main():
     data = bmnist()[:2]  # ignore test split
     model = VAE(z_dim=ARGS.zdim, device=device).to(device)
     optimizer = torch.optim.Adam(model.parameters())
+
+    # Create output directories
+    os.makedirs('./images/vae', exist_ok=True)
 
     train_curve, val_curve = [], []
     for epoch in range(ARGS.epochs):
