@@ -1,4 +1,5 @@
 import argparse
+import os
 
 import torch
 import torch.nn as nn
@@ -6,7 +7,6 @@ import matplotlib.pyplot as plt
 import torch.nn.functional as F
 import numpy as np
 from datasets.mnist import mnist
-import os
 from torchvision.utils import make_grid
 
 
@@ -15,7 +15,7 @@ def log_prior(x):
     Compute the elementwise log probability of a standard Gaussian, i.e.
     N(x | mu=0, sigma=1).
     """
-    raise NotImplementedError
+    
     return logp
 
 
@@ -217,6 +217,9 @@ def save_bpd_plot(train_curve, val_curve, filename):
 def main():
     data = mnist()[:2]  # ignore test split
 
+    # Create output directories
+    os.makedirs('./images/nf', exist_ok=True)
+
     model = Model(shape=[784])
 
     if torch.cuda.is_available():
@@ -241,7 +244,8 @@ def main():
         #  Save grid to images_nfs/
         # --------------------------------------------------------------------
 
-    save_bpd_plot(train_curve, val_curve, 'nfs_bpd.pdf')
+    save_bpd_plot(train_curve, val_curve, './images/nf/nfs_bpd.png')
+    save_bpd_plot(train_curve, val_curve, './images/nf/nfs_bpd.eps)
 
 
 if __name__ == "__main__":
