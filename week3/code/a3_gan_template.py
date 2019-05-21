@@ -156,8 +156,9 @@ def main():
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     assert args.mode in ('train', 'eval')
 
-    # Create output image directory
-    os.makedirs('images/gan', exist_ok=True)
+    # Create output directories
+    os.makedirs('./images/gan', exist_ok=True)
+    os.makedirs('./models', exist_ok=True)
 
     # load data
     dataloader = torch.utils.data.DataLoader(
