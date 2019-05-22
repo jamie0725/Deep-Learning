@@ -8,6 +8,7 @@ import torch.nn.functional as F
 import numpy as np
 from datasets.mnist import mnist
 from torchvision.utils import make_grid
+from torchvision.utils import save_image
 
 
 def log_prior(x):
