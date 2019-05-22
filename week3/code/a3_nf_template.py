@@ -15,6 +15,7 @@ def log_prior(x):
     Compute the elementwise log probability of a standard Gaussian, i.e.
     N(x | mu=0, sigma=1).
     """
+    logp = -0.5 * np.log(2*np.pi) - 0.5 * (x * x)
     
     return logp
 
@@ -56,7 +57,11 @@ class Coupling(torch.nn.Module):
         # scale variables.
         # Suggestion: Linear ReLU Linear ReLU Linear.
         self.nn = torch.nn.Sequential(
-            None
+            nn.Linear(c_in, n_hidden),
+            nn.ReLU(True),
+            nn.Linear(n_hidden, n_hidden),
+            nn.ReLU(True),
+            nn.Linear(n_hidden, 2*c_in)
             )
 
         # The nn should be initialized such that the weights of the last layer
@@ -73,6 +78,8 @@ class Coupling(torch.nn.Module):
         # NOTE: For stability, it is advised to model the scale via:
         # log_scale = tanh(h), where h is the scale-output
         # from the NN.
+
+        out = self.nn(self.mask*z)
 
         if not reverse:
             raise NotImplementedError
@@ -156,8 +163,8 @@ class Model(nn.Module):
         z, ldj = self.flow(z, ldj)
 
         # Compute log_pz and log_px per example
-
-        raise NotImplementedError
+        log_pz = log_prior(z)
+        log_px = log_pz
 
         return log_px
 
@@ -174,7 +181,7 @@ class Model(nn.Module):
         return z
 
 
-def epoch_iter(model, data, optimizer):
+def epoch_iter(model, data, optimizer, device):
     """
     Perform a single epoch for either the training or validation.
     use model.training to determine if in 'training mode' or not.
@@ -182,23 +189,36 @@ def epoch_iter(model, data, optimizer):
     Returns the average bpd ("bits per dimension" which is the negative
     log_2 likelihood per dimension) averaged over the complete epoch.
     """
-
-    avg_bpd = None
+    avg_bpd = 0.
+    if model.training:
+        for i, (imgs, _) in enumerate(data):
+            imgs = imgs.view(-1, 784).to(device)
+            optimizer.zero_grad()
+            loss = model(imgs)
+            loss.backward()
+            optimizer.step()
+            avg_bpd += loss.item()
+    else:
+        for i, (imgs, _) in enumerate(data):
+            imgs = imgs.view(-1, 784).to(device)
+            loss = model(imgs)
+            avg_bpd += loss.item()
+    avg_bpd /= len(data)
 
     return avg_bpd
 
 
-def run_epoch(model, data, optimizer):
+def run_epoch(model, data, optimizer, device):
     """
     Run a train and validation epoch and return average bpd for each.
     """
     traindata, valdata = data
 
     model.train()
-    train_bpd = epoch_iter(model, traindata, optimizer)
+    train_bpd = epoch_iter(model, traindata, optimizer, device)
 
     model.eval()
-    val_bpd = epoch_iter(model, valdata, optimizer)
+    val_bpd = epoch_iter(model, valdata, optimizer, device)
 
     return train_bpd, val_bpd
 
@@ -215,12 +235,15 @@ def save_bpd_plot(train_curve, val_curve, filename):
 
 
 def main():
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    # Print all configs to confirm parameter settings
+    print_flags()
     data = mnist()[:2]  # ignore test split
 
     # Create output directories
     os.makedirs('./images/nf', exist_ok=True)
 
-    model = Model(shape=[784])
+    model = Model(shape=[784]).to(device)
 
     if torch.cuda.is_available():
         model = model.cuda()
@@ -231,7 +254,7 @@ def main():
 
     train_curve, val_curve = [], []
     for epoch in range(ARGS.epochs):
-        bpds = run_epoch(model, data, optimizer)
+        bpds = run_epoch(model, data, optimizer, device)
         train_bpd, val_bpd = bpds
         train_curve.append(train_bpd)
         val_curve.append(val_bpd)
@@ -243,10 +266,20 @@ def main():
         #  You can use the make_grid functionality that is already imported.
         #  Save grid to images_nfs/
         # --------------------------------------------------------------------
+        im_samples = model.sample(25)
+        save_image(im_samples.view(im_samples.shape[0], 1, 28, 28),
+                    './images/nf/{}.png'.format(epoch),
+                    nrow=5, normalize=True)
 
     save_bpd_plot(train_curve, val_curve, './images/nf/nfs_bpd.png')
-    save_bpd_plot(train_curve, val_curve, './images/nf/nfs_bpd.eps)
+    save_bpd_plot(train_curve, val_curve, './images/nf/nfs_bpd.eps')
 
+def print_flags():
+  """
+  Prints all entries in args variable.
+  """
+  for key, value in vars(ARGS).items():
+    print(key + ' : ' + str(value))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
