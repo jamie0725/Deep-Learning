@@ -16,7 +16,7 @@ def log_prior(x):
     Compute the elementwise log probability of a standard Gaussian, i.e.
     N(x | mu=0, sigma=1).
     """
-    logp = -0.5 * np.log(2*np.pi) - 0.5 * (x * x)
+    logp = (-0.5 * np.log(2*np.pi) - 0.5 * (x * x)).sum(dim=-1)
     
     return logp
 
@@ -25,7 +25,7 @@ def sample_prior(size):
     """
     Sample from a standard Gaussian.
     """
-    raise NotImplementedError
+    sample = torch.randn(size)
 
     if torch.cuda.is_available():
         sample = sample.cuda()
@@ -50,9 +50,11 @@ class Coupling(torch.nn.Module):
     def __init__(self, c_in, mask, n_hidden=1024):
         super().__init__()
         self.n_hidden = n_hidden
+        self.c_in = c_in
 
         # Assigns mask to self.mask and creates reference for pytorch.
         self.register_buffer('mask', mask)
+        self.tanh = nn.Tanh()
 
         # Create shared architecture to generate both the translation and
         # scale variables.
@@ -81,11 +83,15 @@ class Coupling(torch.nn.Module):
         # from the NN.
 
         out = self.nn(self.mask*z)
+        scale = out[:,:self.c_in]
+        log_scale = self.tanh(scale)
+        translate = out[:,self.c_in:]
 
         if not reverse:
-            raise NotImplementedError
+            z =  self.mask * z + (1 - self.mask) * (z * torch.exp(log_scale) + translate)
+            ldj += ((1 - self.mask) * log_scale).sum(dim=-1)
         else:
-            raise NotImplementedError
+            z = self.mask * z + (1 - self.mask) * ((z - translate) * torch.exp(-log_scale))
 
         return z, ldj
 
@@ -165,7 +171,7 @@ class Model(nn.Module):
 
         # Compute log_pz and log_px per example
         log_pz = log_prior(z)
-        log_px = log_pz
+        log_px = log_pz + ldj
 
         return log_px
 
@@ -176,8 +182,8 @@ class Model(nn.Module):
         """
         z = sample_prior((n_samples,) + self.flow.z_shape)
         ldj = torch.zeros(z.size(0), device=z.device)
-
-        raise NotImplementedError
+        z, ldj = self.flow(z, ldj, reverse=True)
+        z, _ = self.logit_normalize(z, ldj, reverse=True)
 
         return z
 
@@ -195,16 +201,19 @@ def epoch_iter(model, data, optimizer, device):
         for i, (imgs, _) in enumerate(data):
             imgs = imgs.view(-1, 784).to(device)
             optimizer.zero_grad()
-            loss = model(imgs)
+            logp = model(imgs)
+            loss = -logp.mean(dim=0)
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=ARGS.max_norm)
             optimizer.step()
             avg_bpd += loss.item()
     else:
         for i, (imgs, _) in enumerate(data):
             imgs = imgs.view(-1, 784).to(device)
-            loss = model(imgs)
+            logp = model(imgs)
+            loss = -logp.mean(dim=0)
             avg_bpd += loss.item()
-    avg_bpd /= len(data)
+    avg_bpd /= (len(data) * torch.log(2) * 784)
 
     return avg_bpd
 
@@ -286,6 +295,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--epochs', default=40, type=int,
                         help='max number of epochs')
+    parser.add_argument('--max_norm', default=5, type=int,
+                        help='max clipping norm')                    
 
     ARGS = parser.parse_args()
 
