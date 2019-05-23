@@ -47,10 +47,11 @@ def get_mask():
 
 
 class Coupling(torch.nn.Module):
-    def __init__(self, c_in, mask, n_hidden=1024):
+    def __init__(self, c_in, mask, n_hidden=1024, device='cuda:0'):
         super().__init__()
         self.n_hidden = n_hidden
         self.c_in = c_in
+        self.to(device)
 
         # Assigns mask to self.mask and creates reference for pytorch.
         self.register_buffer('mask', mask)
@@ -97,7 +98,7 @@ class Coupling(torch.nn.Module):
 
 
 class Flow(nn.Module):
-    def __init__(self, shape, n_flows=4):
+    def __init__(self, shape, n_flows=4, device='cuda:0'):
         super().__init__()
         channels, = shape
 
@@ -106,10 +107,11 @@ class Flow(nn.Module):
         self.layers = torch.nn.ModuleList()
 
         for i in range(n_flows):
-            self.layers.append(Coupling(c_in=channels, mask=mask))
-            self.layers.append(Coupling(c_in=channels, mask=1-mask))
+            self.layers.append(Coupling(c_in=channels, mask=mask, device=device))
+            self.layers.append(Coupling(c_in=channels, mask=1-mask, device=device))
 
         self.z_shape = (channels,)
+        self.to(device)
 
     def forward(self, z, logdet, reverse=False):
         if not reverse:
@@ -123,9 +125,10 @@ class Flow(nn.Module):
 
 
 class Model(nn.Module):
-    def __init__(self, shape):
+    def __init__(self, shape, device='cuda:0'):
         super().__init__()
-        self.flow = Flow(shape)
+        self.flow = Flow(shape, device=device).to(device)
+        self.to(device)
 
     def dequantize(self, z):
         return z + torch.rand_like(z)
@@ -213,7 +216,7 @@ def epoch_iter(model, data, optimizer, device):
             logp = model(imgs)
             loss = -logp.mean(dim=0)
             avg_bpd += loss.item()
-    avg_bpd /= (len(data) * torch.log(2) * 784)
+    avg_bpd /= (len(data) * np.log(2) * 784)
 
     return avg_bpd
 
@@ -253,14 +256,12 @@ def main():
     # Create output directories
     os.makedirs('./images/nf', exist_ok=True)
 
-    model = Model(shape=[784]).to(device)
+    model = Model(shape=[784], device=device).to(device)
 
     if torch.cuda.is_available():
         model = model.cuda()
 
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-
-    os.makedirs('images_nfs', exist_ok=True)
 
     train_curve, val_curve = [], []
     for epoch in range(ARGS.epochs):
@@ -274,7 +275,7 @@ def main():
         # --------------------------------------------------------------------
         #  Add functionality to plot samples from model during training.
         #  You can use the make_grid functionality that is already imported.
-        #  Save grid to images_nfs/
+        #  Save grid to images/nfs/
         # --------------------------------------------------------------------
         im_samples = model.sample(25)
         save_image(im_samples.view(im_samples.shape[0], 1, 28, 28),
